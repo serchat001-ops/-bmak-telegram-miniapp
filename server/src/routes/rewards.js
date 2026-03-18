@@ -3,25 +3,22 @@ const router = express.Router();
 const { pool } = require('../db');
 
 const DAILY_REWARD = 100;
-const REFERRAL_REWARD = 50;
 const STREAK_BONUS_DAYS = [7, 14, 30];
 const STREAK_BONUS_AMOUNTS = [500, 1000, 3000];
 
+// Accept userId (DB primary key) for all reward operations
 router.post('/checkin', async (req, res) => {
-  const { telegramId } = req.body;
-  if (!telegramId) return res.status(400).json({ error: 'telegramId required' });
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
 
   const client = await pool.connect();
   try {
-    const userRes = await client.query(
-      'SELECT * FROM users WHERE telegram_id = $1',
-      [telegramId]
-    );
+    const userRes = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
 
     const user = userRes.rows[0];
     const today = new Date().toISOString().split('T')[0];
-    const lastCheckin = user.last_checkin ? user.last_checkin.toISOString().split('T')[0] : null;
+    const lastCheckin = user.last_checkin ? new Date(user.last_checkin).toISOString().split('T')[0] : null;
 
     if (lastCheckin === today) {
       return res.json({
@@ -52,28 +49,18 @@ router.post('/checkin', async (req, res) => {
         last_checkin = $2,
         checkin_streak = $3,
         updated_at = NOW()
-      WHERE telegram_id = $4
-    `, [totalReward, today, newStreak, telegramId]);
+      WHERE id = $4
+    `, [totalReward, today, newStreak, userId]);
 
     await client.query(`
-      INSERT INTO transactions (telegram_id, type, amount, description)
-      VALUES ($1, 'checkin', $2, $3)
-    `, [telegramId, totalReward, `Daily check-in (Day ${newStreak} streak)`]);
+      INSERT INTO transactions (user_db_id, telegram_id, type, amount, description)
+      VALUES ($1, $2, 'checkin', $3, $4)
+    `, [userId, user.telegram_id, totalReward, `Daily check-in (Day ${newStreak} streak)`]);
 
     await client.query('COMMIT');
 
-    const updatedUser = await client.query(
-      'SELECT * FROM users WHERE telegram_id = $1',
-      [telegramId]
-    );
-
-    res.json({
-      success: true,
-      reward: totalReward,
-      streak: newStreak,
-      bonusMessage,
-      user: updatedUser.rows[0],
-    });
+    const updatedUser = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
+    res.json({ success: true, reward: totalReward, streak: newStreak, bonusMessage, user: updatedUser.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('[Checkin] Error:', err.message);
@@ -83,74 +70,37 @@ router.post('/checkin', async (req, res) => {
   }
 });
 
-router.get('/referrals/:telegramId', async (req, res) => {
+router.get('/referrals/:userId', async (req, res) => {
   const client = await pool.connect();
   try {
     const userRes = await client.query(
-      'SELECT referral_code, total_referrals FROM users WHERE telegram_id = $1',
-      [req.params.telegramId]
+      'SELECT referral_code, total_referrals FROM users WHERE id = $1',
+      [req.params.userId]
     );
     if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
 
     const refs = await client.query(`
-      SELECT u.telegram_id, u.username, u.first_name, r.created_at, r.bonus_paid
+      SELECT u.id, u.username, u.first_name, u.display_name, r.created_at, r.bonus_paid
       FROM referrals r
-      JOIN users u ON u.telegram_id = r.referred_id
-      WHERE r.referrer_id = $1
+      JOIN users u ON u.id = r.referred_db_id
+      WHERE r.referrer_db_id = $1
       ORDER BY r.created_at DESC
       LIMIT 20
-    `, [req.params.telegramId]);
+    `, [req.params.userId]);
 
     const botUsername = process.env.BOT_USERNAME || 'bmak_miniapp_bot';
-    const refLink = `https://t.me/${botUsername}?start=${userRes.rows[0].referral_code}`;
+    const domain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN || '';
+    const webLink = domain ? `https://${domain}?ref=${userRes.rows[0].referral_code}` : '';
+    const tgLink = `https://t.me/${botUsername}?start=${userRes.rows[0].referral_code}`;
 
     res.json({
       referralCode: userRes.rows[0].referral_code,
-      referralLink: refLink,
+      referralLink: tgLink,
+      webReferralLink: webLink,
       totalReferrals: userRes.rows[0].total_referrals,
       referrals: refs.rows,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Database error' });
-  } finally {
-    client.release();
-  }
-});
-
-router.post('/referral-bonus', async (req, res) => {
-  const { referrerId, referredId } = req.body;
-  const client = await pool.connect();
-  try {
-    const refRes = await client.query(
-      'SELECT * FROM referrals WHERE referrer_id = $1 AND referred_id = $2 AND bonus_paid = FALSE',
-      [referrerId, referredId]
-    );
-    if (!refRes.rows.length) return res.status(400).json({ error: 'No unpaid referral found' });
-
-    await client.query('BEGIN');
-    await client.query(`
-      UPDATE users SET
-        bmak_balance = bmak_balance + $1,
-        total_earned = total_earned + $1,
-        total_referrals = total_referrals + 1,
-        updated_at = NOW()
-      WHERE telegram_id = $2
-    `, [REFERRAL_REWARD, referrerId]);
-
-    await client.query(
-      'UPDATE referrals SET bonus_paid = TRUE WHERE referrer_id = $1 AND referred_id = $2',
-      [referrerId, referredId]
-    );
-
-    await client.query(`
-      INSERT INTO transactions (telegram_id, type, amount, description)
-      VALUES ($1, 'referral', $2, 'Referral bonus')
-    `, [referrerId, REFERRAL_REWARD]);
-
-    await client.query('COMMIT');
-    res.json({ success: true, reward: REFERRAL_REWARD });
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: 'Database error' });
   } finally {
     client.release();
