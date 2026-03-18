@@ -1,25 +1,15 @@
 {
   "name": "bmak-telegram-miniapp",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5000",
-    "build": "tsc -b && vite build",
+    "dev:server": "cd server && node --watch src/index.js",
+    "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@telegram-apps/sdk-react": "^2.0.25",
-    "@telegram-apps/telegram-ui": "^2.1.6",
-    "ethers": "^6.16.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
   "devDependencies": {
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^4.7.0",
-    "typescript": "^5.9.3",
     "vite": "^5.4.21"
   }
 }
