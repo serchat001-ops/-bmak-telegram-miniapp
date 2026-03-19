@@ -64,6 +64,10 @@ async function initDb() {
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_db_id INTEGER`,
       `ALTER TABLE referrals ADD COLUMN IF NOT EXISTS referrer_db_id INTEGER`,
       `ALTER TABLE referrals ADD COLUMN IF NOT EXISTS referred_db_id INTEGER`,
+      `ALTER TABLE users ALTER COLUMN telegram_id DROP NOT NULL`,
+      `ALTER TABLE transactions ALTER COLUMN telegram_id DROP NOT NULL`,
+      `ALTER TABLE referrals ALTER COLUMN referrer_id DROP NOT NULL`,
+      `ALTER TABLE referrals ALTER COLUMN referred_id DROP NOT NULL`,
     ];
     for (const m of migrations) {
       try { await client.query(m); } catch (e) {}

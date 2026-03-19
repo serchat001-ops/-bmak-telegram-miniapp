@@ -1,32 +1,37 @@
-# B_MAK Telegram Mini App
+# B_MAK — Blockchain Rewards Platform
 
-Complete blockchain Telegram Mini App with daily rewards, referral system, and BSC integration.
+A complete blockchain rewards platform on BSC that works as both a **Telegram Mini App** and a **regular web app**, sharing the same PostgreSQL database.
 
 ## Architecture
 
-- **Frontend**: Vanilla HTML/CSS/JS served by Vite (port 5000) — Telegram WebApp UI
+- **Frontend**: Vanilla HTML/CSS/JS served by Vite (port 5000) — dual-mode UI (Telegram + Web)
 - **Backend**: Node.js + Express API (port 3001) — business logic, rewards, bot
-- **Database**: Replit PostgreSQL — users, transactions, referrals
-- **Blockchain**: BSC (BNB Smart Chain) via ethers.js
-- **Bot**: Telegraf.js Telegram bot with webhook
+- **Database**: Replit PostgreSQL — users (web + telegram), transactions, referrals
+- **Blockchain**: BSC (BNB Smart Chain) — BMAK token, wallet connect
+- **Bot**: Telegraf.js Telegram bot with webhook/polling
+
+## Auth Modes
+
+- **Telegram mode**: Detected by `tg.initDataUnsafe?.user?.id`. Uses Telegram initData validation. Falls back to demo user in dev.
+- **Web mode**: Triggered when no real Telegram user is present. Shows a login modal (display name only). Session stored as `bmak_web_uid` UUID in `localStorage`. Web users have `telegram_id = null` in DB.
 
 ## Project Structure
 
 ```
 public/
-  index.html       - Main app HTML shell
-  style.css        - Complete UI styles
-  app.js           - Frontend JS (API calls, state, UI)
+  index.html       - App HTML (splash, web-login modal, main app)
+  style.css        - Complete UI styles (dark theme + web-login styles)
+  app.js           - Frontend JS (dual auth, API calls, state, UI)
 
 server/
   src/
-    index.js       - Express app entry + bot startup
-    db.js          - PostgreSQL pool + schema init
+    index.js       - Express entry + bot startup + dist serving
+    db.js          - PostgreSQL pool + schema + migrations
     bot.js         - Telegraf Telegram bot
-    telegram.js    - WebApp initData validation + utils
+    telegram.js    - initData validation + referral code gen
     routes/
-      users.js     - Auth, profile, wallet endpoints
-      rewards.js   - Daily check-in, referral bonuses
+      users.js     - Auth, web-register, web-session, profile, wallet
+      rewards.js   - Daily check-in, streak bonuses, referral info
       transactions.js - Transaction history
 
 vite.config.ts     - Vite dev server (serves public/, proxies /api → 3001)
@@ -44,21 +49,30 @@ vite.config.ts     - Vite dev server (serves public/, proxies /api → 3001)
 | GET | `/api/health` | Health check |
 | GET | `/api/config` | App config (contract addr, chain info) |
 | POST | `/api/users/auth` | Authenticate/register Telegram user |
-| GET | `/api/users/profile/:id` | Get user profile |
-| POST | `/api/users/wallet` | Save wallet address |
-| POST | `/api/rewards/checkin` | Daily check-in (100 BMAK) |
-| GET | `/api/rewards/referrals/:id` | Get referral info + link |
-| GET | `/api/transactions/:id` | Transaction history |
+| POST | `/api/users/web-register` | Register new web user (displayName) → returns webUid |
+| POST | `/api/users/web-session` | Restore web session (webUid) → returns user |
+| GET | `/api/users/profile/:userId` | Get user profile by DB id |
+| POST | `/api/users/wallet` | Save BSC wallet address (userId) |
+| POST | `/api/rewards/checkin` | Daily check-in (100 BMAK) — uses userId |
+| GET | `/api/rewards/referrals/:userId` | Get referral info + web/TG links |
+| GET | `/api/transactions/:userId` | Transaction history |
+
+## Database Schema
+
+- **users**: `id`, `telegram_id` (nullable), `web_uid` (nullable), `auth_type` ('telegram'|'web'), `display_name`, `username`, `first_name`, `referral_code`, `bmak_balance`, `checkin_streak`, etc.
+- **transactions**: `id`, `user_db_id` (FK → users.id), `telegram_id` (nullable), `type`, `amount`, `description`
+- **referrals**: `id`, `referrer_db_id` / `referred_db_id` (FK → users.id), `bonus_paid`
 
 ## Features
 
-- 📅 **Daily Check-in** — 100 BMAK per day, with streak tracking
+- 📅 **Daily Check-in** — 100 BMAK per day, streak tracking
 - 🔥 **Streak Bonuses** — 500 BMAK at 7d, 1000 at 14d, 3000 at 30d
-- 👥 **Referral System** — 50 BMAK per referred friend
-- 💼 **Wallet Tab** — Connect BSC wallet, view BMAK/BNB balances
-- ⛓️ **BSC Integration** — Contract address configured, BSC mainnet
-- 📋 **Transaction History** — All rewards and transactions logged
-- 🤖 **Telegram Bot** — `/start` with referral support, stats, share links
+- 👥 **Referral System** — 50 BMAK per invited friend (web + TG links)
+- 💼 **Wallet** — Connect BSC wallet, view BMAK/BNB balances
+- 🌐 **Web Mode** — Works outside Telegram; session via localStorage UUID
+- 📱 **Telegram Mini App** — Full Telegram WebApp integration
+- 📋 **Transaction History** — All rewards logged
+- 🤖 **Telegram Bot** — `/start` referral support, stats
 
 ## Environment Variables
 
@@ -72,5 +86,5 @@ vite.config.ts     - Vite dev server (serves public/, proxies /api → 3001)
 ## Deployment
 
 - Build: `npm run build` (Vite builds public/ → dist/)
-- Run: `node server/src/index.js` (serves API + serves dist/ in prod)
+- Run: `node server/src/index.js` (serves API + dist/ in production)
 - Target: Autoscale

@@ -14,9 +14,10 @@ let state = {
 window.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // Detect mode
+  // Detect mode: only trust Telegram if there's a real user object with an ID
   const tg = window.Telegram?.WebApp;
-  const hasTelegramData = tg && (tg.initData || tg.initDataUnsafe?.user);
+  const tgUserId = tg?.initDataUnsafe?.user?.id;
+  const hasTelegramData = !!(tg && tgUserId);
 
   if (hasTelegramData) {
     state.mode = 'telegram';
@@ -25,6 +26,7 @@ async function init() {
     await initTelegram(tg);
   } else {
     state.mode = 'web';
+    if (tg) { try { tg.ready(); } catch(e) {} }
     await initWeb();
   }
 }
@@ -74,22 +76,30 @@ async function initWeb() {
         return;
       }
     } catch (e) {
-      // Session expired or invalid — clear and show login
+      // Session expired or invalid — clear it
       localStorage.removeItem('bmak_web_uid');
     }
   }
 
-  // No session — show web login after splash
+  // No valid session — show web login after splash delay
+  showWebLogin();
+}
+
+function showWebLogin() {
+  const splash = document.getElementById('splash');
+  const overlay = document.getElementById('web-login-overlay');
+  const delay = splash && !splash.classList.contains('hidden') ? 1400 : 0;
+
   setTimeout(() => {
-    document.getElementById('splash').classList.add('hidden');
-    document.getElementById('web-login-overlay').classList.remove('hidden');
-    // Pre-fill referral code if in URL
+    if (splash) splash.classList.add('hidden');
+    if (overlay) overlay.classList.remove('hidden');
     const refCode = new URLSearchParams(window.location.search).get('ref') || '';
-    if (refCode) {
-      document.getElementById('wl-name-input').dataset.ref = refCode;
+    const inp = document.getElementById('wl-name-input');
+    if (inp) {
+      if (refCode) inp.dataset.ref = refCode;
+      inp.focus();
     }
-    document.getElementById('wl-name-input').focus();
-  }, 1400);
+  }, delay);
 }
 
 // ─── Web Login Submit ─────────────────────────────────────────────────────────
