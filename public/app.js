@@ -281,6 +281,12 @@ function renderModeUI() {
   const pmType = document.getElementById('pm-type');
   if (pmName) pmName.textContent = state.user?.display_name || state.user?.first_name || 'User';
   if (pmType) pmType.textContent = state.mode === 'telegram' ? '📱 Telegram Account' : '🌐 Web Account';
+
+  // Show admin button if this user is the administrator
+  const adminBtn = document.getElementById('pm-admin-btn');
+  if (adminBtn && state.config?.adminEmail && state.user?.email === state.config.adminEmail) {
+    adminBtn.classList.remove('hidden');
+  }
 }
 
 // ─── Render User ──────────────────────────────────────────────────────────────
@@ -555,6 +561,10 @@ function showProfileMenu() {
   el('profile-menu').classList.toggle('hidden');
 }
 function closeProfileMenu() { el('profile-menu').classList.add('hidden'); }
+function goToAdmin() {
+  closeProfileMenu();
+  window.location.href = '/admin/';
+}
 
 function logoutWeb() {
   localStorage.removeItem('bmak_web_uid');
