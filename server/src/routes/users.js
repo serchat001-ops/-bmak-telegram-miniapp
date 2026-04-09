@@ -71,8 +71,11 @@ router.post('/auth', async (req, res) => {
 
 // ─── Web Register ─────────────────────────────────────────────────────────────
 router.post('/web-register', async (req, res) => {
-  const { displayName, password, referralCode } = req.body;
+  const { displayName, email, password, referralCode } = req.body;
 
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Adresse email invalide' });
+  }
   if (!displayName || displayName.trim().length < 2) {
     return res.status(400).json({ error: 'Le nom doit contenir au moins 2 caractères' });
   }
@@ -81,18 +84,18 @@ router.post('/web-register', async (req, res) => {
   }
 
   const safeName = displayName.trim().slice(0, 32);
+  const safeEmail = email.trim().toLowerCase();
 
   try {
-    // Check if display name already taken
+    // Check if email already registered
     const { data: existing } = await supabase
       .from('users')
       .select('id')
-      .eq('display_name', safeName)
-      .eq('auth_type', 'web')
+      .eq('email', safeEmail)
       .maybeSingle();
 
     if (existing) {
-      return res.status(409).json({ error: 'Ce nom d\'utilisateur est déjà pris' });
+      return res.status(409).json({ error: 'Cette adresse email est déjà utilisée' });
     }
 
     const webUid = randomUUID();
@@ -115,8 +118,9 @@ router.post('/web-register', async (req, res) => {
         web_uid: webUid,
         display_name: safeName,
         first_name: safeName,
+        email: safeEmail,
         referral_code: code,
-        auth_type: 'web',
+        auth_type: 'email',
         password_hash: passwordHash,
       })
       .select()
@@ -141,33 +145,31 @@ router.post('/web-register', async (req, res) => {
 
 // ─── Web Login ────────────────────────────────────────────────────────────────
 router.post('/web-login', async (req, res) => {
-  const { displayName, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!displayName || !password) {
-    return res.status(400).json({ error: 'Nom d\'utilisateur et mot de passe requis' });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
 
   try {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('display_name', displayName.trim())
-      .eq('auth_type', 'web')
+      .eq('email', email.trim().toLowerCase())
       .maybeSingle();
 
     if (error) throw error;
     if (!user) {
-      return res.status(401).json({ error: 'Identifiants incorrects' });
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
-    // If user has no password_hash yet (existing user), allow them to set one
     if (!user.password_hash) {
-      return res.status(403).json({ error: 'no_password', message: 'Aucun mot de passe défini. Veuillez vous inscrire à nouveau.' });
+      return res.status(401).json({ error: 'Aucun mot de passe défini pour ce compte. Contactez l\'administrateur.' });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      return res.status(401).json({ error: 'Identifiants incorrects' });
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
     res.json({ success: true, user, webUid: user.web_uid });
