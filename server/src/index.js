@@ -8,6 +8,7 @@ const { createBot } = require('./bot');
 const usersRouter = require('./routes/users');
 const rewardsRouter = require('./routes/rewards');
 const transactionsRouter = require('./routes/transactions');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -32,6 +33,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/users', usersRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/transactions', transactionsRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/api/config', (req, res) => {
   res.json({
@@ -42,6 +44,7 @@ app.get('/api/config', (req, res) => {
     tokenSymbol: 'BMAK',
     dailyReward: 100,
     referralReward: 50,
+    adminEmail: process.env.ADMIN_EMAIL || null,
   });
 });
 
