@@ -463,3 +463,18 @@ function txBadge(t) {
   if (t === 'admin_debit') return 'badge-red';
   return 'badge-gray';
 }
+
+// Expose functions globally for inline onclick handlers
+window.adminLogin = adminLogin;
+window.adminLogout = adminLogout;
+window.showPage = showPage;
+window.viewUser = viewUser;
+window.openBalance = openBalance;
+window.submitBalance = submitBalance;
+window.openPayout = openPayout;
+window.submitPayout = submitPayout;
+window.deleteUser = deleteUser;
+window.closeModal = closeModal;
+window.searchUsers = searchUsers;
+window.usersPage = usersPage;
+window.loadUsers = loadUsers;
