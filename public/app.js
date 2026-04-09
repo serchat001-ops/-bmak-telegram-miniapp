@@ -95,35 +95,119 @@ function showWebLogin() {
     if (overlay) overlay.classList.remove('hidden');
     const refCode = new URLSearchParams(window.location.search).get('ref') || '';
     const inp = document.getElementById('wl-name-input');
-    if (inp) {
-      if (refCode) inp.dataset.ref = refCode;
-      inp.focus();
-    }
+    if (inp && refCode) inp.dataset.ref = refCode;
+    // Focus on login name by default
+    const loginInp = document.getElementById('wl-login-name');
+    if (loginInp) loginInp.focus();
   }, delay);
 }
 
-// ─── Web Login Submit ─────────────────────────────────────────────────────────
-async function submitWebLogin() {
-  const input = document.getElementById('wl-name-input');
-  const btn = document.getElementById('wl-submit-btn');
-  const errEl = document.getElementById('wl-error');
-  const name = input.value.trim();
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('wl-login-form');
+  const registerForm = document.getElementById('wl-register-form');
+  const loginBtn = document.getElementById('tab-login-btn');
+  const registerBtn = document.getElementById('tab-register-btn');
+
+  if (tab === 'login') {
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    loginBtn.classList.add('active');
+    registerBtn.classList.remove('active');
+    document.getElementById('wl-login-name').focus();
+  } else {
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+    loginBtn.classList.remove('active');
+    registerBtn.classList.add('active');
+    document.getElementById('wl-name-input').focus();
+  }
+}
+
+// ─── Login Submit ─────────────────────────────────────────────────────────────
+async function submitLogin() {
+  const nameInput = document.getElementById('wl-login-name');
+  const passInput = document.getElementById('wl-login-password');
+  const btn = document.getElementById('wl-login-btn');
+  const errEl = document.getElementById('wl-login-error');
+
+  const name = nameInput.value.trim();
+  const password = passInput.value;
 
   errEl.classList.add('hidden');
-  if (name.length < 2) {
-    errEl.textContent = 'Please enter at least 2 characters';
+
+  if (!name) {
+    errEl.textContent = 'Veuillez entrer votre nom d\'utilisateur';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (!password) {
+    errEl.textContent = 'Veuillez entrer votre mot de passe';
     errEl.classList.remove('hidden');
     return;
   }
 
   btn.disabled = true;
-  btn.textContent = '⏳ Creating account...';
+  btn.textContent = '⏳ Connexion...';
+
+  try {
+    const data = await apiFetch('/api/users/web-login', 'POST', {
+      displayName: name,
+      password,
+    });
+    if (data.user && data.webUid) {
+      localStorage.setItem('bmak_web_uid', data.webUid);
+      state.user = data.user;
+      state.webUid = data.webUid;
+      document.getElementById('web-login-overlay').classList.add('hidden');
+      finishInit();
+    }
+  } catch (e) {
+    const msg = e?.data?.error || 'Identifiants incorrects. Réessayez.';
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = '🔐 Se connecter';
+  }
+}
+
+// ─── Register Submit ──────────────────────────────────────────────────────────
+async function submitWebLogin() {
+  const input = document.getElementById('wl-name-input');
+  const passInput = document.getElementById('wl-register-password');
+  const pass2Input = document.getElementById('wl-register-password2');
+  const btn = document.getElementById('wl-submit-btn');
+  const errEl = document.getElementById('wl-error');
+  const name = input.value.trim();
+  const password = passInput.value;
+  const password2 = pass2Input.value;
+
+  errEl.classList.add('hidden');
+
+  if (name.length < 2) {
+    errEl.textContent = 'Le nom doit contenir au moins 2 caractères';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password.length < 6) {
+    errEl.textContent = 'Le mot de passe doit contenir au moins 6 caractères';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password !== password2) {
+    errEl.textContent = 'Les mots de passe ne correspondent pas';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Création du compte...';
 
   const refCode = input.dataset.ref || new URLSearchParams(window.location.search).get('ref') || '';
 
   try {
     const data = await apiFetch('/api/users/web-register', 'POST', {
       displayName: name,
+      password,
       referralCode: refCode,
     });
     if (data.user && data.webUid) {
@@ -134,17 +218,19 @@ async function submitWebLogin() {
       finishInit(true);
     }
   } catch (e) {
-    errEl.textContent = 'Registration failed. Please try again.';
+    const msg = e?.data?.error || 'Inscription échouée. Réessayez.';
+    errEl.textContent = msg;
     errEl.classList.remove('hidden');
     btn.disabled = false;
-    btn.textContent = '🚀 Get Started';
+    btn.textContent = '🚀 Créer mon compte';
   }
 }
 
-// Allow Enter key in web login
+// Allow Enter key in forms
 document.addEventListener('DOMContentLoaded', () => {
-  const inp = document.getElementById('wl-name-input');
-  if (inp) inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitWebLogin(); });
+  document.getElementById('wl-login-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLogin(); });
+  document.getElementById('wl-login-name')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLogin(); });
+  document.getElementById('wl-register-password2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitWebLogin(); });
 });
 
 // ─── Finish Init (show main app) ──────────────────────────────────────────────
@@ -489,8 +575,10 @@ async function apiFetch(path, method = 'GET', body = null) {
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${API_BASE}${path}`, opts);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    const err = new Error(data.error || `HTTP ${res.status}`);
+    err.data = data;
+    throw err;
   }
   return res.json();
 }
