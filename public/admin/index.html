@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B_MAK — Administration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a;
+      --bg2: #13132a;
+      --card: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.1);
+      --purple: #8b5cf6;
+      --purple2: #7c3aed;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #f1f5f9;
+      --text2: #94a3b8;
+      --text3: #475569;
+      --radius: 12px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    /* ── Login ── */
+    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:linear-gradient(135deg,#0d0d1a,#1a1a2e,#0f2460); }
+    .login-box { background:rgba(255,255,255,0.05); border:1px solid rgba(139,92,246,0.3); border-radius:20px; padding:40px 32px; width:100%; max-width:380px; text-align:center; }
+    .login-logo { font-size:40px; margin-bottom:6px; }
+    .login-title { font-size:24px; font-weight:900; letter-spacing:2px; background:linear-gradient(135deg,#8b5cf6,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:4px; }
+    .login-sub { font-size:12px; color:var(--text2); margin-bottom:24px; }
+    .login-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:12px 16px; color:#fff; font-size:15px; outline:none; margin-bottom:12px; font-family:inherit; transition:border-color .2s; }
+    .login-input:focus { border-color:rgba(139,92,246,.7); }
+    .login-btn { width:100%; padding:13px; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; margin-bottom:10px; }
+    .login-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .login-err { font-size:12px; color:var(--red); margin-top:4px; }
+
+    /* ── Layout ── */
+    #admin-app { display:none; min-height:100vh; }
+    .admin-sidebar { position:fixed; top:0; left:0; width:220px; height:100vh; background:var(--bg2); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index:100; }
+    .sidebar-logo { padding:20px 20px 16px; border-bottom:1px solid var(--border); }
+    .sidebar-logo-icon { font-size:28px; }
+    .sidebar-logo-text { font-size:16px; font-weight:800; letter-spacing:1px; background:linear-gradient(135deg,#8b5cf6,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .sidebar-logo-sub { font-size:10px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+    .sidebar-nav { flex:1; padding:12px 0; overflow-y:auto; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 20px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text2); transition:all .2s; border-left:3px solid transparent; }
+    .nav-item:hover { background:rgba(139,92,246,.1); color:var(--text); }
+    .nav-item.active { background:rgba(139,92,246,.15); color:#a78bfa; border-left-color:#8b5cf6; }
+    .nav-icon { font-size:16px; width:20px; text-align:center; }
+    .sidebar-footer { padding:16px 20px; border-top:1px solid var(--border); }
+    .admin-badge { font-size:11px; color:var(--text3); }
+    .admin-email { font-size:12px; color:#a78bfa; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .logout-btn { width:100%; padding:8px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:8px; color:var(--red); font-size:12px; font-weight:600; cursor:pointer; margin-top:8px; font-family:inherit; }
+
+    .admin-main { margin-left:220px; padding:24px; min-height:100vh; }
+    .page { display:none; }
+    .page.active { display:block; }
+    .page-title { font-size:22px; font-weight:800; margin-bottom:20px; }
+
+    /* ── Stats cards ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; margin-bottom:24px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
+    .stat-label { font-size:11px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+    .stat-value { font-size:26px; font-weight:800; }
+    .stat-sub { font-size:11px; color:var(--text3); margin-top:4px; }
+    .stat-card.purple .stat-value { color:#a78bfa; }
+    .stat-card.cyan .stat-value { color:var(--cyan); }
+    .stat-card.green .stat-value { color:var(--green); }
+    .stat-card.yellow .stat-value { color:var(--yellow); }
+    .stat-card.red .stat-value { color:var(--red); }
+
+    /* ── Table ── */
+    .table-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .table-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); gap:12px; flex-wrap:wrap; }
+    .table-title { font-size:14px; font-weight:700; }
+    .search-input { background:rgba(255,255,255,0.07); border:1px solid var(--border); border-radius:8px; padding:8px 14px; color:#fff; font-size:13px; outline:none; font-family:inherit; width:220px; }
+    .search-input:focus { border-color:rgba(139,92,246,.6); }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { padding:11px 16px; text-align:left; font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); background:rgba(255,255,255,.02); white-space:nowrap; }
+    td { padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.05); color:var(--text2); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,.02); }
+    .td-main { color:var(--text); font-weight:500; }
+    .badge { display:inline-block; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-green { background:rgba(16,185,129,.15); color:var(--green); }
+    .badge-purple { background:rgba(139,92,246,.15); color:#a78bfa; }
+    .badge-blue { background:rgba(59,130,246,.15); color:#93c5fd; }
+    .badge-gray { background:rgba(100,116,139,.15); color:#94a3b8; }
+    .badge-yellow { background:rgba(245,158,11,.15); color:var(--yellow); }
+    .badge-red { background:rgba(239,68,68,.15); color:var(--red); }
+
+    /* ── Buttons ── */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; font-family:inherit; transition:all .2s; }
+    .btn-primary { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; }
+    .btn-primary:hover { filter:brightness(1.1); }
+    .btn-green { background:rgba(16,185,129,.15); color:var(--green); border:1px solid rgba(16,185,129,.3); }
+    .btn-green:hover { background:rgba(16,185,129,.25); }
+    .btn-red { background:rgba(239,68,68,.1); color:var(--red); border:1px solid rgba(239,68,68,.25); }
+    .btn-red:hover { background:rgba(239,68,68,.2); }
+    .btn-yellow { background:rgba(245,158,11,.1); color:var(--yellow); border:1px solid rgba(245,158,11,.25); }
+    .btn-yellow:hover { background:rgba(245,158,11,.2); }
+    .btn-sm { padding:5px 10px; font-size:11px; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* ── Pagination ── */
+    .pagination { display:flex; align-items:center; gap:8px; padding:14px 20px; border-top:1px solid var(--border); justify-content:flex-end; }
+    .page-info { font-size:12px; color:var(--text3); margin-right:auto; }
+
+    /* ── Modal ── */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.hidden { display:none; }
+    .modal { background:#1a1a2e; border:1px solid rgba(139,92,246,.3); border-radius:16px; padding:28px; width:100%; max-width:480px; }
+    .modal-title { font-size:18px; font-weight:800; margin-bottom:6px; }
+    .modal-sub { font-size:13px; color:var(--text2); margin-bottom:20px; }
+    .modal-label { font-size:12px; color:var(--text3); font-weight:600; margin-bottom:6px; display:block; }
+    .modal-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:11px 14px; color:#fff; font-size:14px; outline:none; margin-bottom:14px; font-family:inherit; }
+    .modal-input:focus { border-color:rgba(139,92,246,.7); }
+    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+    .modal-err { font-size:12px; color:var(--red); margin-bottom:10px; }
+
+    /* ── User detail ── */
+    .user-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
+    .detail-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+    .detail-label { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+    .detail-value { font-size:15px; font-weight:600; word-break:break-all; }
+
+    /* ── Misc ── */
+    .empty { text-align:center; padding:40px; color:var(--text3); font-size:14px; }
+    .loading { text-align:center; padding:40px; color:var(--text3); }
+    .section-gap { margin-bottom:20px; }
+    .flex-gap { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .back-btn { display:inline-flex; align-items:center; gap:6px; color:var(--text2); font-size:13px; cursor:pointer; margin-bottom:16px; background:none; border:none; font-family:inherit; padding:0; }
+    .back-btn:hover { color:var(--text); }
+    .amount-pos { color:var(--green); font-weight:600; }
+    .amount-neg { color:var(--red); font-weight:600; }
+    @media(max-width:768px){
+      .admin-sidebar { display:none; }
+      .admin-main { margin-left:0; padding:16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">⛓</div>
+    <div class="login-title">B_MAK ADMIN</div>
+    <div class="login-sub">Panneau d'administration</div>
+    <input type="email" id="admin-email-input" class="login-input" placeholder="Email administrateur" autocomplete="email" />
+    <input type="password" id="admin-pass-input" class="login-input" placeholder="Mot de passe" autocomplete="current-password" />
+    <button class="login-btn" id="admin-login-btn" onclick="adminLogin()">🔐 Connexion</button>
+    <div class="login-err hidden" id="admin-login-err"></div>
+  </div>
+</div>
+
+<!-- Admin App -->
+<div id="admin-app">
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">⛓</div>
+      <div class="sidebar-logo-text">B_MAK</div>
+      <div class="sidebar-logo-sub">Administration</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
+        <span class="nav-icon">📊</span> Tableau de bord
+      </div>
+      <div class="nav-item" onclick="showPage('users')" data-page="users">
+        <span class="nav-icon">👥</span> Utilisateurs
+      </div>
+      <div class="nav-item" onclick="showPage('transactions')" data-page="transactions">
+        <span class="nav-icon">📋</span> Transactions
+      </div>
+      <div class="nav-item" onclick="showPage('payouts')" data-page="payouts">
+        <span class="nav-icon">💰</span> Paiements
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-badge">Connecté en tant que</div>
+      <div class="admin-email" id="sidebar-email">—</div>
+      <button class="logout-btn" onclick="adminLogout()">🚪 Déconnexion</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">📊 Tableau de bord</div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="loading">Chargement des statistiques...</div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="page" id="page-users">
+      <div class="page-title">👥 Utilisateurs</div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title" id="users-count">Utilisateurs</span>
+          <input type="text" class="search-input" placeholder="🔍 Rechercher email, nom..." oninput="searchUsers(this.value)" id="users-search" />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Type</th>
+                <th>Solde BMAK</th>
+                <th>Total gagné</th>
+                <th>Streak</th>
+                <th>Inscrit</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"><tr><td colspan="9" class="loading">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span class="page-info" id="users-page-info"></span>
+          <button class="btn btn-sm" id="users-prev" onclick="usersPage(-1)" disabled>← Préc.</button>
+          <button class="btn btn-sm" id="users-next" onclick="usersPage(1)">Suiv. →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Detail (hidden sub-view) -->
+    <div class="page" id="page-user-detail">
+      <button class="back-btn" onclick="showPage('users')">← Retour aux utilisateurs</button>
+      <div id="user-detail-content"><div class="loading">Chargement...</div></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="page" id="page-transactions">
+      <div class="page-title">📋 Transactions</div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title" id="tx-count">Transactions</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Utilisateur</th>
+                <th>Type</th>
+                <th>Montant</th>
+                <th>Description</th>
+                <th>Statut</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="tx-tbody"><tr><td colspan="7" class="loading">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payouts -->
+    <div class="page" id="page-payouts">
+      <div class="page-title">💰 Gestion des Paiements</div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title" id="payouts-count">Paiements en attente</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Solde BMAK</th>
+                <th>Wallet</th>
+                <th>Total gagné</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="payouts-tbody"><tr><td colspan="7" class="loading">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Balance Modal -->
+<div class="modal-overlay hidden" id="balance-modal">
+  <div class="modal">
+    <div class="modal-title">Ajuster le solde</div>
+    <div class="modal-sub" id="balance-modal-user"></div>
+    <label class="modal-label">Montant (positif = crédit, négatif = débit)</label>
+    <input type="number" id="balance-amount" class="modal-input" placeholder="ex: 500 ou -100" step="0.01" />
+    <label class="modal-label">Note (optionnel)</label>
+    <input type="text" id="balance-note" class="modal-input" placeholder="Raison de l'ajustement..." />
+    <div class="modal-err hidden" id="balance-err"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('balance-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="submitBalance()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payout Modal -->
+<div class="modal-overlay hidden" id="payout-modal">
+  <div class="modal">
+    <div class="modal-title">Confirmer le paiement</div>
+    <div class="modal-sub" id="payout-modal-user"></div>
+    <label class="modal-label">Montant envoyé (BMAK)</label>
+    <input type="number" id="payout-amount" class="modal-input" placeholder="Montant..." step="0.01" />
+    <div class="modal-err hidden" id="payout-err"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('payout-modal')">Annuler</button>
+      <button class="btn btn-green" onclick="submitPayout()">✅ Marquer comme payé</button>
+    </div>
+  </div>
+</div>
+
+<script src="../admin.js"></script>
+</body>
+</html>
