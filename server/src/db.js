@@ -3,32 +3,25 @@ const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
+let supabase = null;
+
 if (!supabaseUrl || !supabaseKey) {
-  console.error('[DB] Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false },
-});
-
-// Raw SQL via Supabase RPC (for schema init / DDL)
-async function rpc(sql) {
-  const { error } = await supabase.rpc('exec_sql', { sql });
-  if (error) throw error;
+  console.error('[DB] Missing SUPABASE_URL or SUPABASE_SERVICE_KEY — database features will be unavailable');
+} else {
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false },
+  });
 }
 
 async function initDb() {
-  // We use Supabase's REST API for data operations.
-  // For schema creation we use the pg REST endpoint with service key.
-  // Supabase exposes /rest/v1/rpc — we'll create tables via raw SQL if the rpc exists,
-  // otherwise verify tables exist via a select.
+  if (!supabase) {
+    console.warn('[DB] Skipping DB init — Supabase credentials not configured');
+    return;
+  }
 
-  // Check if tables exist by doing a simple select
   const { error: checkErr } = await supabase.from('users').select('id').limit(1);
 
   if (checkErr && checkErr.code === '42P01') {
-    // Table doesn't exist — we need to create it via SQL
-    // Use the pg endpoint (available in Supabase management API)
     console.warn('[DB] Tables missing. Please create them in the Supabase dashboard SQL editor:');
     console.warn(`
 CREATE TABLE IF NOT EXISTS users (
