@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>B_MAK – Gagnez des B_MAK gratuitement chaque jour</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -18,12 +14,9 @@
             line-height: 1.5;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
 
+        /* ── Header ── */
         .header {
             display: flex;
             justify-content: space-between;
@@ -34,17 +27,8 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
             margin-bottom: 2rem;
         }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-icon {
-            font-size: 2rem;
-        }
-
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 2rem; }
         .logo-text {
             font-size: 1.6rem;
             font-weight: bold;
@@ -53,24 +37,11 @@
             background-clip: text;
             color: transparent;
         }
+        .nav { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+        .nav a { color: #cbd5e1; text-decoration: none; transition: 0.3s; font-weight: 500; }
+        .nav a:hover { color: #8b5cf6; }
 
-        .nav {
-            display: flex;
-            gap: 1.2rem;
-            flex-wrap: wrap;
-        }
-
-        .nav a {
-            color: #cbd5e1;
-            text-decoration: none;
-            transition: 0.3s;
-            font-weight: 500;
-        }
-
-        .nav a:hover {
-            color: #8b5cf6;
-        }
-
+        /* ── Boutons ── */
         .btn {
             background: linear-gradient(135deg, #8b5cf6, #06b6d4);
             border: none;
@@ -85,27 +56,12 @@
             font-size: 1rem;
             text-align: center;
         }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-outline { background: transparent; border: 1px solid #8b5cf6; }
+        .btn-large { padding: 1rem 2rem; font-size: 1.2rem; }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            opacity: 0.9;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid #8b5cf6;
-        }
-
-        .btn-large {
-            padding: 1rem 2rem;
-            font-size: 1.2rem;
-        }
-
-        .hero {
-            text-align: center;
-            padding: 3rem 1rem;
-        }
-
+        /* ── Hero ── */
+        .hero { text-align: center; padding: 3rem 1rem; }
         .hero h1 {
             font-size: 2.8rem;
             margin-bottom: 1rem;
@@ -114,25 +70,11 @@
             background-clip: text;
             color: transparent;
         }
+        .hero p { font-size: 1.2rem; color: #cbd5e1; max-width: 700px; margin: 0 auto 2rem; }
+        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
-        .hero p {
-            font-size: 1.2rem;
-            color: #cbd5e1;
-            max-width: 700px;
-            margin: 0 auto 2rem;
-        }
-
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .section {
-            margin: 3rem 0;
-        }
-
+        /* ── Sections ── */
+        .section { margin: 3rem 0; }
         .section-title {
             text-align: center;
             font-size: 2rem;
@@ -140,12 +82,35 @@
             color: #e2e8f0;
         }
 
+        /* ── Accordion mobile ── */
+        .accordion-header {
+            display: none;
+            width: 100%;
+            background: rgba(139,92,246,0.15);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 1rem;
+            padding: 1rem 1.4rem;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: left;
+            cursor: pointer;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            transition: background 0.2s;
+        }
+        .accordion-header:hover { background: rgba(139,92,246,0.25); }
+        .accordion-header .arrow { transition: transform 0.3s; font-style: normal; }
+        .accordion-header.open .arrow { transform: rotate(180deg); }
+        .accordion-body { overflow: hidden; transition: max-height 0.4s ease; }
+
+        /* ── Features ── */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 1.8rem;
         }
-
         .feature-card {
             background: rgba(255,255,255,0.08);
             backdrop-filter: blur(10px);
@@ -155,38 +120,32 @@
             transition: transform 0.2s;
             border: 1px solid rgba(255,255,255,0.1);
         }
+        .feature-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.12); }
+        .feature-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .feature-card h3 { margin-bottom: 0.8rem; }
+        .feature-card p { color: #cbd5e1; font-size: 0.9rem; }
 
-        .feature-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255,255,255,0.12);
+        /* ── Wallet block ── */
+        .wallet-block {
+            background: rgba(139,92,246,0.1);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 1rem;
+            padding: 1.2rem 1.5rem;
+            margin: 2rem 0;
+            text-align: center;
+            line-height: 2;
+        }
+        .wallet-block code {
+            background: rgba(0,0,0,0.35);
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.4rem;
+            font-size: 0.85rem;
+            word-break: break-all;
         }
 
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-card h3 {
-            margin-bottom: 0.8rem;
-        }
-
-        .feature-card p {
-            color: #cbd5e1;
-            font-size: 0.9rem;
-        }
-
-        .tokenomics {
-            background: rgba(255,255,255,0.05);
-            border-radius: 1.5rem;
-            padding: 2rem;
-        }
-
-        .token-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 0.8rem;
-        }
-
+        /* ── Tokenomics ── */
+        .tokenomics { background: rgba(255,255,255,0.05); border-radius: 1.5rem; padding: 2rem; }
+        .token-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; }
         .token-item {
             display: flex;
             justify-content: space-between;
@@ -194,19 +153,37 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        .roadmap-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
-        }
+        /* ── Roadmap ── */
+        .roadmap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
+        .roadmap-card { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1.5rem; text-align: center; }
 
-        .roadmap-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            text-align: center;
+        /* ── Rejoins nous ── */
+        .community-section { margin: 3rem 0; }
+        .community-grid {
+            display: flex;
+            gap: 1.2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
         }
+        .community-card {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 1.2rem;
+            padding: 1rem 1.6rem;
+            text-decoration: none;
+            color: white;
+            font-weight: 600;
+            transition: transform 0.2s, background 0.2s;
+            font-size: 1rem;
+        }
+        .community-card:hover { transform: translateY(-3px); background: rgba(139,92,246,0.2); }
+        .community-card .cc-icon { font-size: 1.8rem; }
 
+        /* ── Footer ── */
         .footer {
             text-align: center;
             padding: 2rem;
@@ -215,24 +192,9 @@
             color: #cbd5e1;
             font-size: 0.85rem;
         }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .social-links a {
-            color: #cbd5e1;
-            text-decoration: none;
-        }
-
-        .social-links a:hover {
-            color: #8b5cf6;
-        }
-
+        .social-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .social-links a { color: #cbd5e1; text-decoration: none; }
+        .social-links a:hover { color: #8b5cf6; }
         .contract-address {
             background: rgba(0,0,0,0.4);
             padding: 0.5rem;
@@ -242,47 +204,64 @@
             word-break: break-all;
         }
 
+        /* ── Mobile ── */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-            }
-            .header {
-                flex-direction: column;
-                text-align: center;
-            }
-            .nav {
-                justify-content: center;
-            }
+            .hero h1 { font-size: 2rem; }
+            .header { flex-direction: column; text-align: center; }
+            .nav { justify-content: center; }
+            .section-title { display: none; }
+            .accordion-header { display: flex; }
+            .accordion-body { max-height: 0; }
+            .accordion-body.open { max-height: 2000px; }
+        }
+        @media (min-width: 769px) {
+            .accordion-body { max-height: none !important; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <span class="logo-icon">💰</span>
-                <span class="logo-text">B_MAK</span>
-            </div>
-            <div class="nav">
-                <a href="#">Accueil</a>
-                <a href="#features">Fonctionnalités</a>
-                <a href="#tokenomics">Tokenomics</a>
-                <a href="#roadmap">Feuille de route</a>
-                <a href="#team">Équipe</a>
-            </div>
-        </div>
+<div class="container">
 
-        <div class="hero">
-            <h1>B_MAK</h1>
-            <p>Gagnez des B_MAK gratuitement chaque jour, sans investissement. Check-in quotidien, bonus de série et parrainage.</p>
-            <div class="hero-buttons">
-                <a href="/app" class="btn btn-large">🎮 Accéder au minage</a>
-                <a href="https://t.me/B_MAK_Claim_Bot" class="btn btn-outline btn-large">🤖 Bot Telegram</a>
-            </div>
+    <!-- En-tête -->
+    <div class="header">
+        <div class="logo">
+            <span class="logo-icon">💰</span>
+            <span class="logo-text">B_MAK</span>
         </div>
+        <div class="nav">
+            <a href="#">Accueil</a>
+            <a href="#features">Comment gagner</a>
+            <a href="#tokenomics">Tokenomics</a>
+            <a href="#roadmap">Feuille de route</a>
+            <a href="#community">Communauté</a>
+            <a href="#team">Équipe</a>
+        </div>
+    </div>
 
-        <div id="features" class="section">
-            <h2 class="section-title">⚡ Comment gagner des B_MAK</h2>
+    <!-- Hero -->
+    <div class="hero">
+        <h1>B_MAK</h1>
+        <p>Gagnez des B_MAK gratuitement chaque jour, sans investissement. Inscrivez-vous, faites votre check-in quotidien et invitez vos amis.</p>
+        <div class="hero-buttons">
+            <a href="/app" class="btn btn-large">🎮 S'inscrire / Se connecter</a>
+            <a href="https://t.me/B_MAK_Claim_Bot" class="btn btn-outline btn-large" target="_blank">🤖 Bot Telegram</a>
+        </div>
+    </div>
+
+    <!-- Bloc wallet -->
+    <div class="wallet-block">
+        🔐 <strong>Ajouter B_MAK à votre wallet</strong><br>
+        Réseau : <strong>BNB Smart Chain (BSC)</strong><br>
+        Adresse du contrat : <code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code>
+    </div>
+
+    <!-- Section : Comment gagner -->
+    <div id="features" class="section">
+        <button class="accordion-header" onclick="toggleAccordion(this)">
+            ⚡ Comment gagner des B_MAK <span class="arrow">▼</span>
+        </button>
+        <h2 class="section-title">⚡ Comment gagner des B_MAK</h2>
+        <div class="accordion-body">
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">📅</div>
@@ -306,9 +285,15 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div id="tokenomics" class="section">
-            <h2 class="section-title">📊 Répartition des tokens</h2>
+    <!-- Section : Tokenomics -->
+    <div id="tokenomics" class="section">
+        <button class="accordion-header" onclick="toggleAccordion(this)">
+            📊 Répartition des tokens <span class="arrow">▼</span>
+        </button>
+        <h2 class="section-title">📊 Répartition des tokens</h2>
+        <div class="accordion-body">
             <div class="tokenomics">
                 <div class="token-grid">
                     <div class="token-item"><span>💧 Liquidité</span><span>20% (100M)</span></div>
@@ -320,12 +305,18 @@
                     <div class="token-item"><span>🛡️ Sécurité</span><span>10% (50M)</span></div>
                     <div class="token-item"><span>✨ Airdrops</span><span>10% (50M)</span></div>
                 </div>
-                <p style="text-align: center; margin-top: 1.5rem;">Offre totale : <strong>500 000 000 B_MAK</strong> | Taxe 2% (burn, marketing, équipe, holders)</p>
+                <p style="text-align:center;margin-top:1.5rem;">Offre totale : <strong>500 000 000 B_MAK</strong> | Taxe 2% (burn, marketing, équipe, holders)</p>
             </div>
         </div>
+    </div>
 
-        <div id="roadmap" class="section">
-            <h2 class="section-title">🗺️ Feuille de route</h2>
+    <!-- Section : Roadmap -->
+    <div id="roadmap" class="section">
+        <button class="accordion-header" onclick="toggleAccordion(this)">
+            🗺️ Feuille de route <span class="arrow">▼</span>
+        </button>
+        <h2 class="section-title">🗺️ Feuille de route</h2>
+        <div class="accordion-body">
             <div class="roadmap-grid">
                 <div class="roadmap-card"><strong>Q2 2026</strong><br>✅ Lancement bot Telegram<br>✅ 1000 mineurs</div>
                 <div class="roadmap-card"><strong>Q3 2026</strong><br>🎯 Listing CoinMarketCap<br>🎯 5000 holders</div>
@@ -333,32 +324,76 @@
                 <div class="roadmap-card"><strong>2027</strong><br>🛒 E-commerce<br>🏆 Staking et classements</div>
             </div>
         </div>
+    </div>
 
-        <div id="team" class="section">
-            <h2 class="section-title">👨‍💻 Équipe</h2>
-            <div style="max-width: 350px; margin: 0 auto; background: rgba(255,255,255,0.05); border-radius: 1.5rem; padding: 1.5rem; text-align: center;">
-                <div style="font-size: 3rem;">👤</div>
-                <h3>Benjamin Makoma</h3>
-                <p>Fondateur & développeur</p>
-                <p style="font-size: 0.85rem; color: #cbd5e1;">Transparent, engagé, bâtit seul ce projet pour la communauté.</p>
+    <!-- Section : Communauté -->
+    <div id="community" class="section community-section">
+        <button class="accordion-header" onclick="toggleAccordion(this)">
+            🌍 Rejoins la communauté <span class="arrow">▼</span>
+        </button>
+        <h2 class="section-title">🌍 Rejoins la communauté</h2>
+        <div class="accordion-body">
+            <div class="community-grid">
+                <a href="https://x.com/ServiceMed97138" target="_blank" class="community-card">
+                    <span class="cc-icon">🐦</span>
+                    <span>Twitter / X</span>
+                </a>
+                <a href="https://t.me/+b9jYgBSJqfxhZDM9" target="_blank" class="community-card">
+                    <span class="cc-icon">✈️</span>
+                    <span>Groupe Telegram</span>
+                </a>
+                <a href="https://chat.whatsapp.com/F9zJKasF8U2G3zI75Rm5jT" target="_blank" class="community-card">
+                    <span class="cc-icon">💬</span>
+                    <span>Groupe WhatsApp</span>
+                </a>
             </div>
-        </div>
-
-        <div style="text-align: center; margin: 2rem 0;">
-            <a href="/app" class="btn btn-large">🎮 Lancer l'application de minage</a>
-        </div>
-
-        <div class="footer">
-            <div class="social-links">
-                <a href="https://t.me/B_MAK_Claim_Bot">🤖 Bot Telegram</a>
-                <a href="#">🐦 Twitter (bientôt)</a>
-                <a href="#">💬 Groupe Telegram</a>
-            </div>
-            <div class="contract-address">
-                📜 Contrat B_MAK (BEP-20) : 0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D
-            </div>
-            <p style="margin-top: 1rem;">© 2026 B_MAK – Gagnez des B_MAK gratuitement chaque jour</p>
         </div>
     </div>
+
+    <!-- Section : Équipe -->
+    <div id="team" class="section">
+        <button class="accordion-header" onclick="toggleAccordion(this)">
+            👨‍💻 Équipe <span class="arrow">▼</span>
+        </button>
+        <h2 class="section-title">👨‍💻 Équipe</h2>
+        <div class="accordion-body">
+            <div style="max-width:350px;margin:0 auto;background:rgba(255,255,255,0.05);border-radius:1.5rem;padding:1.5rem;text-align:center;">
+                <div style="font-size:3rem;">👤</div>
+                <h3>Benjamin Makoma</h3>
+                <p>Fondateur &amp; développeur</p>
+                <p style="font-size:0.85rem;color:#cbd5e1;margin-top:0.5rem;">Transparent, engagé, bâtit seul ce projet pour la communauté.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA final -->
+    <div style="text-align:center;margin:2.5rem 0;">
+        <a href="/app" class="btn btn-large">🚀 S'inscrire et commencer à miner</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="social-links">
+            <a href="https://t.me/B_MAK_Claim_Bot" target="_blank">🤖 Bot Telegram</a>
+            <a href="https://x.com/ServiceMed97138" target="_blank">🐦 Twitter / X</a>
+            <a href="https://t.me/+b9jYgBSJqfxhZDM9" target="_blank">✈️ Groupe Telegram</a>
+            <a href="https://chat.whatsapp.com/F9zJKasF8U2G3zI75Rm5jT" target="_blank">💬 WhatsApp</a>
+        </div>
+        <div class="contract-address">
+            📜 Contrat B_MAK (BEP-20) : 0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D
+        </div>
+        <p style="margin-top:1rem;">© 2026 B_MAK – Gagnez des B_MAK gratuitement chaque jour</p>
+    </div>
+
+</div>
+
+<script>
+function toggleAccordion(btn) {
+    const body = btn.nextElementSibling.nextElementSibling;
+    const isOpen = body.classList.contains('open');
+    btn.classList.toggle('open', !isOpen);
+    body.classList.toggle('open', !isOpen);
+}
+</script>
 </body>
 </html>
