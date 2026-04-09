@@ -91,15 +91,25 @@ router.get('/referrals/:userId', async (req, res) => {
 
     const { data: refs, error: refsErr } = await supabase
       .from('referrals')
-      .select('created_at, bonus_paid, users!referred_db_id(id, username, first_name, display_name)')
+      .select('referred_db_id, created_at, bonus_paid')
       .eq('referrer_db_id', req.params.userId)
       .order('created_at', { ascending: false })
       .limit(20);
 
     if (refsErr) throw refsErr;
 
+    const referredIds = (refs || []).map(r => r.referred_db_id).filter(Boolean);
+    let usersMap = {};
+    if (referredIds.length > 0) {
+      const { data: refUsers } = await supabase
+        .from('users')
+        .select('id, username, first_name, display_name')
+        .in('id', referredIds);
+      (refUsers || []).forEach(u => { usersMap[u.id] = u; });
+    }
+
     const referrals = (refs || []).map(r => ({
-      ...(r.users || {}),
+      ...(usersMap[r.referred_db_id] || {}),
       created_at: r.created_at,
       bonus_paid: r.bonus_paid,
     }));
