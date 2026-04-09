@@ -96,8 +96,8 @@ function showWebLogin() {
     const refCode = new URLSearchParams(window.location.search).get('ref') || '';
     const inp = document.getElementById('wl-name-input');
     if (inp && refCode) inp.dataset.ref = refCode;
-    // Focus on login name by default
-    const loginInp = document.getElementById('wl-login-name');
+    // Focus on login email by default
+    const loginInp = document.getElementById('wl-login-email');
     if (loginInp) loginInp.focus();
   }, delay);
 }
@@ -113,30 +113,30 @@ function switchAuthTab(tab) {
     registerForm.classList.add('hidden');
     loginBtn.classList.add('active');
     registerBtn.classList.remove('active');
-    document.getElementById('wl-login-name').focus();
+    document.getElementById('wl-login-email').focus();
   } else {
     loginForm.classList.add('hidden');
     registerForm.classList.remove('hidden');
     loginBtn.classList.remove('active');
     registerBtn.classList.add('active');
-    document.getElementById('wl-name-input').focus();
+    document.getElementById('wl-register-email').focus();
   }
 }
 
 // ─── Login Submit ─────────────────────────────────────────────────────────────
 async function submitLogin() {
-  const nameInput = document.getElementById('wl-login-name');
+  const emailInput = document.getElementById('wl-login-email');
   const passInput = document.getElementById('wl-login-password');
   const btn = document.getElementById('wl-login-btn');
   const errEl = document.getElementById('wl-login-error');
 
-  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
   const password = passInput.value;
 
   errEl.classList.add('hidden');
 
-  if (!name) {
-    errEl.textContent = 'Veuillez entrer votre nom d\'utilisateur';
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Veuillez entrer une adresse email valide';
     errEl.classList.remove('hidden');
     return;
   }
@@ -150,10 +150,7 @@ async function submitLogin() {
   btn.textContent = '⏳ Connexion...';
 
   try {
-    const data = await apiFetch('/api/users/web-login', 'POST', {
-      displayName: name,
-      password,
-    });
+    const data = await apiFetch('/api/users/web-login', 'POST', { email, password });
     if (data.user && data.webUid) {
       localStorage.setItem('bmak_web_uid', data.webUid);
       state.user = data.user;
@@ -162,7 +159,7 @@ async function submitLogin() {
       finishInit();
     }
   } catch (e) {
-    const msg = e?.data?.error || 'Identifiants incorrects. Réessayez.';
+    const msg = e?.data?.error || 'Email ou mot de passe incorrect.';
     errEl.textContent = msg;
     errEl.classList.remove('hidden');
     btn.disabled = false;
@@ -172,17 +169,25 @@ async function submitLogin() {
 
 // ─── Register Submit ──────────────────────────────────────────────────────────
 async function submitWebLogin() {
-  const input = document.getElementById('wl-name-input');
+  const emailInput = document.getElementById('wl-register-email');
+  const nameInput = document.getElementById('wl-name-input');
   const passInput = document.getElementById('wl-register-password');
   const pass2Input = document.getElementById('wl-register-password2');
   const btn = document.getElementById('wl-submit-btn');
   const errEl = document.getElementById('wl-error');
-  const name = input.value.trim();
+
+  const email = emailInput.value.trim();
+  const name = nameInput.value.trim();
   const password = passInput.value;
   const password2 = pass2Input.value;
 
   errEl.classList.add('hidden');
 
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Veuillez entrer une adresse email valide';
+    errEl.classList.remove('hidden');
+    return;
+  }
   if (name.length < 2) {
     errEl.textContent = 'Le nom doit contenir au moins 2 caractères';
     errEl.classList.remove('hidden');
@@ -202,10 +207,11 @@ async function submitWebLogin() {
   btn.disabled = true;
   btn.textContent = '⏳ Création du compte...';
 
-  const refCode = input.dataset.ref || new URLSearchParams(window.location.search).get('ref') || '';
+  const refCode = nameInput.dataset.ref || new URLSearchParams(window.location.search).get('ref') || '';
 
   try {
     const data = await apiFetch('/api/users/web-register', 'POST', {
+      email,
       displayName: name,
       password,
       referralCode: refCode,
@@ -228,8 +234,8 @@ async function submitWebLogin() {
 
 // Allow Enter key in forms
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('wl-login-email')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLogin(); });
   document.getElementById('wl-login-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLogin(); });
-  document.getElementById('wl-login-name')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLogin(); });
   document.getElementById('wl-register-password2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitWebLogin(); });
 });
 
