@@ -1,28 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db');
+const { supabase } = require('../db');
 
 router.get('/:userId', async (req, res) => {
-  const { limit = 20, offset = 0 } = req.query;
-  const client = await pool.connect();
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const offset = parseInt(req.query.offset) || 0;
+
   try {
-    const result = await client.query(`
-      SELECT * FROM transactions
-      WHERE user_db_id = $1
-      ORDER BY created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [req.params.userId, Math.min(parseInt(limit), 100), parseInt(offset)]);
+    const { data: transactions, error, count } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact' })
+      .eq('user_db_id', req.params.userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    const countRes = await client.query(
-      'SELECT COUNT(*) FROM transactions WHERE user_db_id = $1',
-      [req.params.userId]
-    );
-
-    res.json({ transactions: result.rows, total: parseInt(countRes.rows[0].count) });
+    if (error) throw error;
+    res.json({ transactions: transactions || [], total: count || 0 });
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
-  } finally {
-    client.release();
   }
 });
 

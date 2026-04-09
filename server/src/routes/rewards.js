@@ -1,24 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db');
+const { supabase } = require('../db');
 
 const DAILY_REWARD = 100;
 const STREAK_BONUS_DAYS = [7, 14, 30];
 const STREAK_BONUS_AMOUNTS = [500, 1000, 3000];
 
-// Accept userId (DB primary key) for all reward operations
 router.post('/checkin', async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: 'userId required' });
 
-  const client = await pool.connect();
   try {
-    const userRes = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
-    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
+    const { data: user, error: userErr } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
 
-    const user = userRes.rows[0];
+    if (userErr) throw userErr;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
     const today = new Date().toISOString().split('T')[0];
-    const lastCheckin = user.last_checkin ? new Date(user.last_checkin).toISOString().split('T')[0] : null;
+    const lastCheckin = user.last_checkin
+      ? new Date(user.last_checkin).toISOString().split('T')[0]
+      : null;
 
     if (lastCheckin === today) {
       return res.json({
@@ -30,80 +35,90 @@ router.post('/checkin', async (req, res) => {
     }
 
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const newStreak = lastCheckin === yesterday ? user.checkin_streak + 1 : 1;
+    const newStreak = lastCheckin === yesterday ? (user.checkin_streak || 0) + 1 : 1;
 
     let totalReward = DAILY_REWARD;
     let bonusMessage = null;
-
     const bonusIdx = STREAK_BONUS_DAYS.indexOf(newStreak);
     if (bonusIdx !== -1) {
       totalReward += STREAK_BONUS_AMOUNTS[bonusIdx];
       bonusMessage = `🎉 ${newStreak}-day streak bonus: +${STREAK_BONUS_AMOUNTS[bonusIdx]} BMAK!`;
     }
 
-    await client.query('BEGIN');
-    await client.query(`
-      UPDATE users SET
-        bmak_balance = bmak_balance + $1,
-        total_earned = total_earned + $1,
-        last_checkin = $2,
-        checkin_streak = $3,
-        updated_at = NOW()
-      WHERE id = $4
-    `, [totalReward, today, newStreak, userId]);
+    const newBalance = parseFloat(user.bmak_balance || 0) + totalReward;
+    const newEarned = parseFloat(user.total_earned || 0) + totalReward;
 
-    await client.query(`
-      INSERT INTO transactions (user_db_id, telegram_id, type, amount, description)
-      VALUES ($1, $2, 'checkin', $3, $4)
-    `, [userId, user.telegram_id, totalReward, `Daily check-in (Day ${newStreak} streak)`]);
+    const { data: updatedUser, error: updateErr } = await supabase
+      .from('users')
+      .update({
+        bmak_balance: newBalance,
+        total_earned: newEarned,
+        last_checkin: today,
+        checkin_streak: newStreak,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select()
+      .single();
 
-    await client.query('COMMIT');
+    if (updateErr) throw updateErr;
 
-    const updatedUser = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
-    res.json({ success: true, reward: totalReward, streak: newStreak, bonusMessage, user: updatedUser.rows[0] });
+    await supabase.from('transactions').insert({
+      user_db_id: userId,
+      telegram_id: user.telegram_id || null,
+      type: 'checkin',
+      amount: totalReward,
+      description: `Daily check-in (Day ${newStreak} streak)`,
+    });
+
+    res.json({ success: true, reward: totalReward, streak: newStreak, bonusMessage, user: updatedUser });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
     console.error('[Checkin] Error:', err.message);
     res.status(500).json({ error: 'Database error' });
-  } finally {
-    client.release();
   }
 });
 
 router.get('/referrals/:userId', async (req, res) => {
-  const client = await pool.connect();
   try {
-    const userRes = await client.query(
-      'SELECT referral_code, total_referrals FROM users WHERE id = $1',
-      [req.params.userId]
-    );
-    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
+    const { data: user, error: userErr } = await supabase
+      .from('users')
+      .select('referral_code, total_referrals')
+      .eq('id', req.params.userId)
+      .maybeSingle();
 
-    const refs = await client.query(`
-      SELECT u.id, u.username, u.first_name, u.display_name, r.created_at, r.bonus_paid
-      FROM referrals r
-      JOIN users u ON u.id = r.referred_db_id
-      WHERE r.referrer_db_id = $1
-      ORDER BY r.created_at DESC
-      LIMIT 20
-    `, [req.params.userId]);
+    if (userErr) throw userErr;
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const botUsername = process.env.BOT_USERNAME || 'bmak_miniapp_bot';
+    const { data: refs, error: refsErr } = await supabase
+      .from('referrals')
+      .select('created_at, bonus_paid, users!referred_db_id(id, username, first_name, display_name)')
+      .eq('referrer_db_id', req.params.userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (refsErr) throw refsErr;
+
+    const referrals = (refs || []).map(r => ({
+      ...(r.users || {}),
+      created_at: r.created_at,
+      bonus_paid: r.bonus_paid,
+    }));
+
+    const botUsername = process.env.BOT_USERNAME || 'B_MAK_Claim_Bot';
     const domain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN || '';
-    const webLink = domain ? `https://${domain}?ref=${userRes.rows[0].referral_code}` : '';
-    const tgLink = `https://t.me/${botUsername}?start=${userRes.rows[0].referral_code}`;
+    const webLink = domain ? `https://${domain}/app?ref=${user.referral_code}` : '';
+    const tgLink = `https://t.me/${botUsername}?start=${user.referral_code}`;
 
     res.json({
-      referralCode: userRes.rows[0].referral_code,
+      referralCode: user.referral_code,
       referralLink: tgLink,
       webReferralLink: webLink,
-      totalReferrals: userRes.rows[0].total_referrals,
-      referrals: refs.rows,
+      totalReferrals: user.total_referrals,
+      referrals,
     });
   } catch (err) {
+    console.error('[Referrals] Error:', err.message);
     res.status(500).json({ error: 'Database error' });
-  } finally {
-    client.release();
   }
 });
 

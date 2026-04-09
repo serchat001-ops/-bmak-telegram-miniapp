@@ -1,94 +1,82 @@
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
-const dbUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
-const pool = new Pool({
-  connectionString: dbUrl,
-  ssl: dbUrl && dbUrl.includes('supabase')
-    ? { rejectUnauthorized: false }
-    : false,
-});
-
-async function initDb() {
-  const client = await pool.connect();
-  try {
-    // ── Step 1: Create tables (if they don't exist) ──────────────────────────
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        telegram_id BIGINT UNIQUE,
-        web_uid TEXT UNIQUE,
-        auth_type TEXT DEFAULT 'telegram',
-        username TEXT,
-        display_name TEXT,
-        first_name TEXT,
-        last_name TEXT,
-        referral_code TEXT UNIQUE,
-        referred_by INTEGER,
-        wallet_address TEXT,
-        bmak_balance NUMERIC(20,4) DEFAULT 0,
-        total_earned NUMERIC(20,4) DEFAULT 0,
-        last_checkin DATE,
-        checkin_streak INTEGER DEFAULT 0,
-        total_referrals INTEGER DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS transactions (
-        id SERIAL PRIMARY KEY,
-        user_db_id INTEGER,
-        telegram_id BIGINT,
-        type TEXT NOT NULL,
-        amount NUMERIC(20,4) NOT NULL,
-        description TEXT,
-        tx_hash TEXT,
-        status TEXT DEFAULT 'completed',
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS referrals (
-        id SERIAL PRIMARY KEY,
-        referrer_db_id INTEGER,
-        referred_db_id INTEGER,
-        referrer_id BIGINT,
-        referred_id BIGINT,
-        bonus_paid BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-
-    // ── Step 2: Migrate existing tables (add new columns if missing) ─────────
-    const migrations = [
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS web_uid TEXT`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_type TEXT DEFAULT 'telegram'`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT`,
-      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_db_id INTEGER`,
-      `ALTER TABLE referrals ADD COLUMN IF NOT EXISTS referrer_db_id INTEGER`,
-      `ALTER TABLE referrals ADD COLUMN IF NOT EXISTS referred_db_id INTEGER`,
-      `ALTER TABLE users ALTER COLUMN telegram_id DROP NOT NULL`,
-      `ALTER TABLE transactions ALTER COLUMN telegram_id DROP NOT NULL`,
-      `ALTER TABLE referrals ALTER COLUMN referrer_id DROP NOT NULL`,
-      `ALTER TABLE referrals ALTER COLUMN referred_id DROP NOT NULL`,
-    ];
-    for (const m of migrations) {
-      try { await client.query(m); } catch (e) {}
-    }
-
-    // ── Step 3: Create indexes (after columns exist) ─────────────────────────
-    const indexes = [
-      `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_web_uid ON users(web_uid) WHERE web_uid IS NOT NULL`,
-      `CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_transactions_user_db_id ON transactions(user_db_id)`,
-    ];
-    for (const idx of indexes) {
-      try { await client.query(idx); } catch (e) {}
-    }
-
-    console.log('[DB] Schema initialized');
-  } finally {
-    client.release();
-  }
+if (!supabaseUrl || !supabaseKey) {
+  console.error('[DB] Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
 }
 
-module.exports = { pool, initDb };
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false },
+});
+
+// Raw SQL via Supabase RPC (for schema init / DDL)
+async function rpc(sql) {
+  const { error } = await supabase.rpc('exec_sql', { sql });
+  if (error) throw error;
+}
+
+async function initDb() {
+  // We use Supabase's REST API for data operations.
+  // For schema creation we use the pg REST endpoint with service key.
+  // Supabase exposes /rest/v1/rpc — we'll create tables via raw SQL if the rpc exists,
+  // otherwise verify tables exist via a select.
+
+  // Check if tables exist by doing a simple select
+  const { error: checkErr } = await supabase.from('users').select('id').limit(1);
+
+  if (checkErr && checkErr.code === '42P01') {
+    // Table doesn't exist — we need to create it via SQL
+    // Use the pg endpoint (available in Supabase management API)
+    console.warn('[DB] Tables missing. Please create them in the Supabase dashboard SQL editor:');
+    console.warn(`
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT UNIQUE,
+  web_uid TEXT UNIQUE,
+  auth_type TEXT DEFAULT 'telegram',
+  username TEXT,
+  display_name TEXT,
+  first_name TEXT,
+  last_name TEXT,
+  referral_code TEXT UNIQUE,
+  referred_by INTEGER,
+  wallet_address TEXT,
+  bmak_balance NUMERIC(20,4) DEFAULT 0,
+  total_earned NUMERIC(20,4) DEFAULT 0,
+  last_checkin DATE,
+  checkin_streak INTEGER DEFAULT 0,
+  total_referrals INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS transactions (
+  id SERIAL PRIMARY KEY,
+  user_db_id INTEGER,
+  telegram_id BIGINT,
+  type TEXT NOT NULL,
+  amount NUMERIC(20,4) NOT NULL,
+  description TEXT,
+  tx_hash TEXT,
+  status TEXT DEFAULT 'completed',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS referrals (
+  id SERIAL PRIMARY KEY,
+  referrer_db_id INTEGER,
+  referred_db_id INTEGER,
+  referrer_id BIGINT,
+  referred_id BIGINT,
+  bonus_paid BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+    `);
+  } else if (checkErr) {
+    console.warn('[DB] Check warning:', checkErr.message);
+  }
+
+  console.log('[DB] Supabase client ready');
+}
+
+module.exports = { supabase, initDb };
