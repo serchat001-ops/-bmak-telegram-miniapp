@@ -9,6 +9,7 @@ const usersRouter = require('./routes/users');
 const rewardsRouter = require('./routes/rewards');
 const transactionsRouter = require('./routes/transactions');
 const adminRouter = require('./routes/admin');
+const walletRouter = require('./routes/wallet');
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -34,6 +35,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/wallet', walletRouter);
 
 app.get('/api/config', (req, res) => {
   res.json({

@@ -66,3 +66,8 @@ deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "dist"
 run = ["node", "server/src/index.js"]
+
+[userenv]
+
+[userenv.shared]
+BMAK_CONTRACT_ADDRESS = "0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D"

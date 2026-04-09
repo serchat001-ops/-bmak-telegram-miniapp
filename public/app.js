@@ -512,8 +512,41 @@ async function saveWallet() {
     el('wallet-addr-display').textContent = shorten(addr);
     el('receive-addr-text').textContent = addr;
     closeModal('wallet-modal');
-    showToast('Wallet connected! ✓', 'green');
+    showToast('Wallet connecté ! ✓', 'green');
+    await loadOnChainBalance();
   } catch (e) { showToast('Error saving wallet'); }
+}
+
+async function loadOnChainBalance() {
+  const addr = state.user?.wallet_address;
+  const bnbEl = el('bnb-bal');
+  const bnbUsdEl = el('bnb-usd');
+  const bmakAssetEl = el('bmak-asset-bal');
+  const bmakUsdEl = bmakAssetEl ? bmakAssetEl.closest('.asset-right')?.querySelector('.asset-usd') : null;
+
+  if (!addr) {
+    if (bnbEl) bnbEl.textContent = '—';
+    if (bnbUsdEl) bnbUsdEl.textContent = 'Connectez un wallet';
+    return;
+  }
+
+  if (bnbEl) bnbEl.textContent = '⏳';
+  if (bnbUsdEl) bnbUsdEl.textContent = 'Chargement...';
+
+  try {
+    const data = await apiFetch(`/api/wallet/balance/${addr}`);
+
+    if (bnbEl) bnbEl.textContent = data.bnb !== null ? `${data.bnb} BNB` : '—';
+    if (bnbUsdEl) bnbUsdEl.textContent = 'BNB Smart Chain';
+
+    if (data.bmak !== null && bmakAssetEl) {
+      bmakAssetEl.textContent = fmtNum(data.bmak, 4);
+      if (bmakUsdEl) bmakUsdEl.textContent = 'On-chain (BSC)';
+    }
+  } catch (e) {
+    if (bnbEl) bnbEl.textContent = '—';
+    if (bnbUsdEl) bnbUsdEl.textContent = 'Erreur réseau';
+  }
 }
 
 function confirmSend() {
@@ -583,6 +616,7 @@ function switchTab(tab) {
   state.currentTab = tab;
   if (tab === 'history') loadTransactions();
   if (tab === 'referral') loadReferrals();
+  if (tab === 'wallet') loadOnChainBalance();
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
