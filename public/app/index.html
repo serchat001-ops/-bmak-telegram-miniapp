@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>B_MAK — Blockchain Rewards</title>
+  <meta name="description" content="Earn BMAK tokens daily with check-ins, referrals and BSC blockchain rewards." />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Splash -->
+    <div id="splash" class="splash">
+      <div class="splash-logo">
+        <div class="splash-icon">⛓</div>
+        <div class="splash-title">B_MAK</div>
+        <div class="splash-subtitle">Blockchain Rewards Platform</div>
+      </div>
+      <div class="splash-loader"><div class="loader-bar"></div></div>
+    </div>
+
+    <!-- Web Login Modal (shown to non-Telegram visitors) -->
+    <div id="web-login-overlay" class="web-login-overlay hidden">
+      <div class="web-login-box">
+        <div class="wl-logo">
+          <div class="wl-icon">⛓</div>
+          <div class="wl-title">B_MAK</div>
+        </div>
+        <div class="wl-heading">Create your account</div>
+        <div class="wl-desc">Choose a display name to start earning BMAK rewards</div>
+        <input type="text" id="wl-name-input" class="wl-input" placeholder="Your display name (e.g. CryptoKing)" maxlength="32" />
+        <div class="wl-error hidden" id="wl-error"></div>
+        <button class="wl-btn" id="wl-submit-btn" onclick="submitWebLogin()">
+          🚀 Get Started
+        </button>
+        <div class="wl-footer">
+          Already registered? Your session is saved automatically.
+          <br/>
+          <a href="https://t.me/" target="_blank" class="wl-tg-link">📱 Use Telegram Mini App instead</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main" class="main hidden">
+      <header class="header">
+        <div class="header-inner">
+          <div class="logo-group">
+            <span class="logo-chain">⛓</span>
+            <span class="logo-name">B_MAK</span>
+            <span class="mode-badge" id="mode-badge"></span>
+          </div>
+          <div class="header-right">
+            <div class="balance-chip">
+              <span id="header-balance">0</span>
+              <span class="chip-label">BMAK</span>
+            </div>
+            <div class="avatar-mini" id="header-avatar" onclick="showProfileMenu()">👤</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Profile Menu (web only) -->
+      <div id="profile-menu" class="profile-menu hidden">
+        <div class="pm-user">
+          <div class="pm-name" id="pm-name"></div>
+          <div class="pm-type" id="pm-type"></div>
+        </div>
+        <button class="pm-btn danger" onclick="logoutWeb()">🚪 Log out</button>
+        <button class="pm-btn" onclick="closeProfileMenu()">Cancel</button>
+      </div>
+
+      <!-- Home Tab -->
+      <div class="tab-content" id="tab-home">
+        <div class="hero-card">
+          <div class="hero-top">
+            <div>
+              <div class="greeting" id="greeting">Welcome!</div>
+              <div class="hero-label">Your BMAK Balance</div>
+              <div class="hero-balance" id="hero-balance">0.00</div>
+              <div class="hero-earned">Total earned: <span id="total-earned">0.00</span> BMAK</div>
+            </div>
+            <div class="avatar-circle" id="avatar">👤</div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-box">
+              <div class="stat-val" id="streak-val">0</div>
+              <div class="stat-lbl">🔥 Streak</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val" id="refs-val">0</div>
+              <div class="stat-lbl">👥 Referrals</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val" id="checkin-status">-</div>
+              <div class="stat-lbl">📅 Check-in</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkin-card" id="checkin-card">
+          <div class="checkin-content">
+            <div class="checkin-icon">📅</div>
+            <div class="checkin-info">
+              <div class="checkin-title">Daily Check-in</div>
+              <div class="checkin-desc">Earn 100 BMAK every day!</div>
+            </div>
+          </div>
+          <button class="checkin-btn" id="checkin-btn" onclick="doCheckin()">
+            <span id="checkin-btn-text">Check In</span>
+          </button>
+        </div>
+
+        <div class="streak-info" id="streak-info"></div>
+
+        <div class="section-header">
+          <span>Recent Activity</span>
+          <a href="#" onclick="switchTab('history'); return false;" class="see-all">See all</a>
+        </div>
+        <div id="recent-txs" class="tx-list"></div>
+      </div>
+
+      <!-- Wallet Tab -->
+      <div class="tab-content hidden" id="tab-wallet">
+        <div class="wallet-header-card">
+          <div class="wallet-label">Wallet</div>
+          <div class="wallet-balance-big" id="wallet-balance">0.00 BMAK</div>
+          <div class="wallet-addr" id="wallet-addr-display">No wallet connected</div>
+          <div class="wallet-btns">
+            <button class="w-btn primary" onclick="showConnectWallet()">🔗 Connect</button>
+            <button class="w-btn secondary" onclick="showSend()">↑ Send</button>
+            <button class="w-btn secondary" onclick="showReceive()">↓ Receive</button>
+          </div>
+        </div>
+        <div class="section-header mt16"><span>Token Assets</span></div>
+        <div class="assets-list">
+          <div class="asset-row">
+            <div class="asset-icon bsc">◆</div>
+            <div class="asset-info"><div class="asset-name">BMAK Token</div><div class="asset-sub">BSC Network</div></div>
+            <div class="asset-right"><div class="asset-bal" id="bmak-asset-bal">0.00</div><div class="asset-usd">In-app balance</div></div>
+          </div>
+          <div class="asset-row">
+            <div class="asset-icon bnb">⬡</div>
+            <div class="asset-info"><div class="asset-name">BNB</div><div class="asset-sub">BNB Smart Chain</div></div>
+            <div class="asset-right"><div class="asset-bal" id="bnb-bal">—</div><div class="asset-usd" id="bnb-usd">Connect wallet</div></div>
+          </div>
+        </div>
+        <div class="section-header mt16"><span>Network Info</span></div>
+        <div class="network-card">
+          <div class="network-row"><span class="net-lbl">Network</span><span class="net-val">BSC Mainnet</span></div>
+          <div class="network-row"><span class="net-lbl">Chain ID</span><span class="net-val">56</span></div>
+          <div class="network-row"><span class="net-lbl">Contract</span><span class="net-val contract-addr" id="contract-addr">Loading...</span></div>
+        </div>
+
+        <div id="wallet-modal" class="modal-overlay hidden">
+          <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">Connect Wallet</div>
+            <input type="text" id="wallet-input" class="modal-input" placeholder="BSC address (0x...)" />
+            <button class="modal-btn primary" onclick="saveWallet()">Connect Wallet</button>
+            <button class="modal-btn secondary" onclick="closeModal('wallet-modal')">Cancel</button>
+          </div>
+        </div>
+        <div id="send-modal" class="modal-overlay hidden">
+          <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">Send BMAK</div>
+            <label class="modal-label">Recipient Address</label>
+            <input type="text" id="send-addr" class="modal-input" placeholder="0x..." />
+            <label class="modal-label">Amount (BMAK)</label>
+            <input type="number" id="send-amount" class="modal-input" placeholder="0.00" min="0" step="0.01" />
+            <div class="modal-note">⚠️ Blockchain transactions require BNB for gas fees</div>
+            <button class="modal-btn primary" onclick="confirmSend()">Confirm Send</button>
+            <button class="modal-btn secondary" onclick="closeModal('send-modal')">Cancel</button>
+          </div>
+        </div>
+        <div id="receive-modal" class="modal-overlay hidden">
+          <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">Receive BMAK</div>
+            <div class="receive-qr">📷</div>
+            <div class="receive-addr" id="receive-addr-text">Connect wallet first</div>
+            <button class="modal-btn primary" onclick="copyAddress()">📋 Copy Address</button>
+            <button class="modal-btn secondary" onclick="closeModal('receive-modal')">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rewards Tab -->
+      <div class="tab-content hidden" id="tab-rewards">
+        <div class="rewards-hero">
+          <div class="rewards-icon">🎁</div>
+          <div class="rewards-title">Earn BMAK Rewards</div>
+          <div class="rewards-desc">Complete tasks and earn daily bonuses</div>
+        </div>
+        <div class="reward-cards">
+          <div class="reward-card daily">
+            <div class="rc-left"><div class="rc-icon">📅</div><div class="rc-info"><div class="rc-name">Daily Check-in</div><div class="rc-desc">Check in every day</div></div></div>
+            <div class="rc-right"><div class="rc-amount">+100</div><div class="rc-unit">BMAK/day</div></div>
+          </div>
+          <div class="reward-card streak">
+            <div class="rc-left"><div class="rc-icon">🔥</div><div class="rc-info"><div class="rc-name">Streak Bonuses</div><div class="rc-desc">Keep your streak going</div></div></div>
+            <div class="rc-right"><div class="rc-amount">+500</div><div class="rc-unit">7-day bonus</div></div>
+          </div>
+          <div class="reward-card ref">
+            <div class="rc-left"><div class="rc-icon">👥</div><div class="rc-info"><div class="rc-name">Referral Bonus</div><div class="rc-desc">Invite friends to earn</div></div></div>
+            <div class="rc-right"><div class="rc-amount">+50</div><div class="rc-unit">per friend</div></div>
+          </div>
+        </div>
+        <div class="section-header mt16"><span>Streak Milestones</span></div>
+        <div class="milestones">
+          <div class="milestone" id="ms-7"><div class="ms-days">7 days</div><div class="ms-bonus">+500 BMAK</div><div class="ms-bar"><div class="ms-fill" id="ms-fill-7"></div></div></div>
+          <div class="milestone" id="ms-14"><div class="ms-days">14 days</div><div class="ms-bonus">+1,000 BMAK</div><div class="ms-bar"><div class="ms-fill" id="ms-fill-14"></div></div></div>
+          <div class="milestone" id="ms-30"><div class="ms-days">30 days</div><div class="ms-bonus">+3,000 BMAK</div><div class="ms-bar"><div class="ms-fill" id="ms-fill-30"></div></div></div>
+        </div>
+        <button class="big-btn mt16" onclick="doCheckin()">📅 Claim Daily Reward</button>
+      </div>
+
+      <!-- Referral Tab -->
+      <div class="tab-content hidden" id="tab-referral">
+        <div class="ref-hero">
+          <div class="ref-hero-icon">👥</div>
+          <div class="ref-hero-title">Refer &amp; Earn</div>
+          <div class="ref-hero-desc">Earn 50 BMAK for every friend you invite!</div>
+        </div>
+        <div class="ref-code-card">
+          <div class="ref-code-label">Your Referral Code</div>
+          <div class="ref-code" id="ref-code">Loading...</div>
+          <div class="ref-code-actions">
+            <button class="ref-btn" onclick="copyRefCode()">📋 Copy Code</button>
+            <button class="ref-btn primary" onclick="shareRef()">🚀 Share Link</button>
+          </div>
+        </div>
+        <div class="ref-stats-row">
+          <div class="ref-stat"><div class="ref-stat-val" id="ref-count">0</div><div class="ref-stat-lbl">Total Referrals</div></div>
+          <div class="ref-stat"><div class="ref-stat-val" id="ref-earned">0</div><div class="ref-stat-lbl">BMAK Earned</div></div>
+        </div>
+        <div class="share-links mt16" id="share-links-box" style="display:none">
+          <div class="share-link-item">
+            <div class="sl-label">🌐 Web Link</div>
+            <div class="sl-url" id="sl-web-url">—</div>
+            <button class="sl-copy" onclick="copyWebRefLink()">Copy</button>
+          </div>
+          <div class="share-link-item">
+            <div class="sl-label">📱 Telegram Link</div>
+            <div class="sl-url" id="sl-tg-url">—</div>
+            <button class="sl-copy" onclick="copyTgRefLink()">Copy</button>
+          </div>
+        </div>
+        <div class="section-header mt16"><span>Your Referrals</span></div>
+        <div id="ref-list" class="ref-list"><div class="empty-state">Invite friends to see them here!</div></div>
+      </div>
+
+      <!-- History Tab -->
+      <div class="tab-content hidden" id="tab-history">
+        <div class="section-header" style="margin-top:0"><span>Transaction History</span></div>
+        <div id="all-txs" class="tx-list"></div>
+        <div id="tx-empty" class="empty-state hidden">No transactions yet.<br/>Complete your first check-in!</div>
+      </div>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="home" onclick="switchTab('home')"><span class="nav-ico">🏠</span><span class="nav-lbl">Home</span></button>
+        <button class="nav-item" data-tab="wallet" onclick="switchTab('wallet')"><span class="nav-ico">💼</span><span class="nav-lbl">Wallet</span></button>
+        <button class="nav-item" data-tab="rewards" onclick="switchTab('rewards')"><span class="nav-ico">🎁</span><span class="nav-lbl">Rewards</span></button>
+        <button class="nav-item" data-tab="referral" onclick="switchTab('referral')"><span class="nav-ico">👥</span><span class="nav-lbl">Refer</span></button>
+        <button class="nav-item" data-tab="history" onclick="switchTab('history')"><span class="nav-ico">📋</span><span class="nav-lbl">History</span></button>
+      </nav>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+  <script src="../app.js"></script>
+</body>
+</html>
