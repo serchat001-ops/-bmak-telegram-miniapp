@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { supabase } = require('../db');
 const { validateTelegramWebAppData, generateReferralCode } = require('../telegram');
 const { randomUUID } = require('crypto');
@@ -33,7 +34,6 @@ router.post('/auth', async (req, res) => {
       }
     }
 
-    // Upsert user
     const { data: user, error } = await supabase
       .from('users')
       .upsert({
@@ -71,16 +71,34 @@ router.post('/auth', async (req, res) => {
 
 // ─── Web Register ─────────────────────────────────────────────────────────────
 router.post('/web-register', async (req, res) => {
-  const { displayName, referralCode } = req.body;
+  const { displayName, password, referralCode } = req.body;
+
   if (!displayName || displayName.trim().length < 2) {
-    return res.status(400).json({ error: 'Display name must be at least 2 characters' });
+    return res.status(400).json({ error: 'Le nom doit contenir au moins 2 caractères' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
   }
 
-  const webUid = randomUUID();
   const safeName = displayName.trim().slice(0, 32);
-  const code = 'WEB' + webUid.replace(/-/g, '').slice(0, 8).toUpperCase();
 
   try {
+    // Check if display name already taken
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('display_name', safeName)
+      .eq('auth_type', 'web')
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(409).json({ error: 'Ce nom d\'utilisateur est déjà pris' });
+    }
+
+    const webUid = randomUUID();
+    const code = 'WEB' + webUid.replace(/-/g, '').slice(0, 8).toUpperCase();
+    const passwordHash = await bcrypt.hash(password, 10);
+
     let referredByDbId = null;
     if (referralCode) {
       const { data: refData } = await supabase
@@ -99,6 +117,7 @@ router.post('/web-register', async (req, res) => {
         first_name: safeName,
         referral_code: code,
         auth_type: 'web',
+        password_hash: passwordHash,
       })
       .select()
       .single();
@@ -116,7 +135,45 @@ router.post('/web-register', async (req, res) => {
     res.json({ success: true, user, webUid });
   } catch (err) {
     console.error('[Web Register] Error:', err.message);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: 'Échec de l\'inscription' });
+  }
+});
+
+// ─── Web Login ────────────────────────────────────────────────────────────────
+router.post('/web-login', async (req, res) => {
+  const { displayName, password } = req.body;
+
+  if (!displayName || !password) {
+    return res.status(400).json({ error: 'Nom d\'utilisateur et mot de passe requis' });
+  }
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('display_name', displayName.trim())
+      .eq('auth_type', 'web')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user) {
+      return res.status(401).json({ error: 'Identifiants incorrects' });
+    }
+
+    // If user has no password_hash yet (existing user), allow them to set one
+    if (!user.password_hash) {
+      return res.status(403).json({ error: 'no_password', message: 'Aucun mot de passe défini. Veuillez vous inscrire à nouveau.' });
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Identifiants incorrects' });
+    }
+
+    res.json({ success: true, user, webUid: user.web_uid });
+  } catch (err) {
+    console.error('[Web Login] Error:', err.message);
+    res.status(500).json({ error: 'Erreur de connexion' });
   }
 });
 
