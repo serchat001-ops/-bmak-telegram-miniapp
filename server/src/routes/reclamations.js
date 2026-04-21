@@ -110,7 +110,6 @@ router.patch('/:id/process', requireAdmin, async (req, res) => {
     await supabase.from('reclamations').update({
       status: 'processed',
       processed_at: new Date().toISOString(),
-      processed_by: req.adminUser.id,
     }).eq('id', reclaim.id);
 
     await supabase.from('users').update({
@@ -155,8 +154,6 @@ router.patch('/:id/reject', requireAdmin, async (req, res) => {
     await supabase.from('reclamations').update({
       status: 'rejected',
       processed_at: new Date().toISOString(),
-      processed_by: req.adminUser.id,
-      reject_reason: reason || null,
     }).eq('id', reclaim.id);
 
     await supabase.from('notifications').insert({
