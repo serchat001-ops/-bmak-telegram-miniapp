@@ -196,17 +196,20 @@
           <div class="network-row"><span class="net-lbl">Contract</span><span class="net-val contract-addr" id="contract-addr">Loading...</span></div>
         </div>
 
-        <button class="metamask-cta" id="metamask-btn" onclick="connectMetaMask()">
-          🦊 Connecter avec MetaMask
-        </button>
-
         <div id="wallet-modal" class="modal-overlay hidden">
           <div class="modal-sheet">
             <div class="modal-handle"></div>
-            <div class="modal-title">Connect Wallet</div>
-            <input type="text" id="wallet-input" class="modal-input" placeholder="BSC address (0x...)" />
-            <button class="modal-btn primary" onclick="saveWallet()">Connect Wallet</button>
-            <button class="modal-btn secondary" onclick="closeModal('wallet-modal')">Cancel</button>
+            <div class="modal-title">Connecter votre wallet</div>
+
+            <button class="metamask-cta" id="metamask-btn" onclick="connectMetaMask()">
+              🦊 Connecter avec MetaMask
+            </button>
+
+            <div class="modal-divider"><span>ou saisir manuellement</span></div>
+
+            <input type="text" id="wallet-input" class="modal-input" placeholder="Adresse BSC (0x...)" />
+            <button class="modal-btn primary" onclick="saveWallet()">Enregistrer l'adresse</button>
+            <button class="modal-btn secondary" onclick="closeModal('wallet-modal')">Annuler</button>
           </div>
         </div>
         <div id="send-modal" class="modal-overlay hidden">

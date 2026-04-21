@@ -330,3 +330,8 @@ body {
 .metamask-cta { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:14px; padding:14px 18px; background:linear-gradient(135deg,#f6851b,#e2761b); color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 8px 22px rgba(246,133,27,0.35); }
 .metamask-cta:hover:not(:disabled) { background:linear-gradient(135deg,#e2761b,#cd6116); }
 .metamask-cta:disabled { opacity:0.6; cursor:not-allowed; }
+
+/* ── Modal divider "ou" ── */
+.modal-divider { display:flex; align-items:center; gap:10px; margin:14px 0; color:rgba(255,255,255,0.5); font-size:12px; text-transform:uppercase; letter-spacing:0.5px; }
+.modal-divider::before, .modal-divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.15); }
+.metamask-cta { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px 18px; background:linear-gradient(135deg,#f6851b,#e2761b); color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 8px 22px rgba(246,133,27,0.35); }
