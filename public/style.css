@@ -317,3 +317,11 @@ body {
 .reclam-badge.hidden { display:none; }
 .btn-danger { background:#ef4444; color:#fff; border:none; }
 .btn-danger:hover:not(:disabled) { background:#dc2626; }
+
+/* ── Wallet enhancements: MetaMask + hide balance ── */
+.wallet-label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.eye-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); color:#fff; width:34px; height:34px; border-radius:10px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; padding:0; }
+.eye-btn:hover { background:rgba(255,255,255,0.2); }
+.w-btn.metamask { background:linear-gradient(135deg,#f6851b,#e2761b); color:#fff; border:none; font-weight:800; }
+.w-btn.metamask:hover:not(:disabled) { background:linear-gradient(135deg,#e2761b,#cd6116); }
+.w-btn.metamask:disabled { opacity:0.6; cursor:not-allowed; }

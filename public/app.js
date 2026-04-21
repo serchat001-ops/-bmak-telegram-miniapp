@@ -365,6 +365,9 @@ function renderUser() {
     const reclaimAmount = el('reclaim-amount');
     if (reclaimAmount) reclaimAmount.textContent = fmtNum(bal, 0);
   }
+
+  // Re-apply balance mask after re-render
+  if (state.balanceHidden) applyBalanceMask();
 }
 
 // ─── Reclamations ─────────────────────────────────────────────────────────────
@@ -556,6 +559,91 @@ function copyTgRefLink() {
 
 // ─── Wallet ───────────────────────────────────────────────────────────────────
 function showConnectWallet() { el('wallet-modal').classList.remove('hidden'); }
+
+// ─── MetaMask ─────────────────────────────────────────────────────────────────
+async function connectMetaMask() {
+  if (!window.ethereum) {
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+      const url = location.host + location.pathname;
+      window.location.href = `https://metamask.app.link/dapp/${url}`;
+      return;
+    }
+    return showToast('MetaMask non détecté. Installez l\'extension.');
+  }
+  const btn = el('metamask-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Connexion...'; }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts || !accounts[0]) throw new Error('Aucun compte');
+    const addr = accounts[0];
+
+    // Switch to BSC mainnet
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x38' }],
+      });
+    } catch (switchErr) {
+      if (switchErr.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x38',
+            chainName: 'BNB Smart Chain',
+            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+            blockExplorerUrls: ['https://bscscan.com'],
+          }],
+        });
+      }
+    }
+
+    await apiFetch('/api/users/wallet', 'POST', { userId: state.user.id, walletAddress: addr });
+    state.user.wallet_address = addr;
+    el('wallet-addr-display').textContent = shorten(addr);
+    el('receive-addr-text').textContent = addr;
+    showToast('🦊 MetaMask connecté !', 'green');
+    await loadOnChainBalance();
+    renderUser();
+  } catch (e) {
+    showToast(e.message || 'Connexion MetaMask refusée');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🦊 MetaMask'; }
+  }
+}
+
+// ─── Hide/Show Balance ────────────────────────────────────────────────────────
+state.balanceHidden = localStorage.getItem('bmak_balance_hidden') === '1';
+
+function applyBalanceMask() {
+  const hidden = state.balanceHidden;
+  const eye = el('balance-eye');
+  if (eye) eye.textContent = hidden ? '🙈' : '👁';
+  const ids = ['header-balance', 'hero-balance', 'wallet-balance', 'bmak-asset-bal', 'bnb-bal', 'total-earned', 'reclaim-amount'];
+  ids.forEach(id => {
+    const node = el(id);
+    if (!node) return;
+    if (hidden) {
+      if (!node.dataset.real) node.dataset.real = node.textContent;
+      node.textContent = '••••';
+    } else if (node.dataset.real) {
+      node.textContent = node.dataset.real;
+      delete node.dataset.real;
+    }
+  });
+}
+
+function toggleBalanceHidden() {
+  state.balanceHidden = !state.balanceHidden;
+  localStorage.setItem('bmak_balance_hidden', state.balanceHidden ? '1' : '0');
+  // Clear stored values so renderUser writes fresh ones, then re-mask
+  ['header-balance','hero-balance','wallet-balance','bmak-asset-bal','bnb-bal','total-earned','reclaim-amount'].forEach(id => {
+    const n = el(id); if (n) delete n.dataset.real;
+  });
+  renderUser();
+  loadOnChainBalance();
+  applyBalanceMask();
+}
 function showSend() {
   if (!state.user?.wallet_address) return showToast('Connect wallet first');
   el('send-modal').classList.remove('hidden');
@@ -608,6 +696,7 @@ async function loadOnChainBalance() {
       bmakAssetEl.textContent = fmtNum(data.bmak, 4);
       if (bmakUsdEl) bmakUsdEl.textContent = 'On-chain (BSC)';
     }
+    if (state.balanceHidden) applyBalanceMask();
   } catch (e) {
     if (bnbEl) bnbEl.textContent = '—';
     if (bnbUsdEl) bnbUsdEl.textContent = 'Erreur réseau';

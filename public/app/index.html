@@ -164,13 +164,17 @@
       <!-- Wallet Tab -->
       <div class="tab-content hidden" id="tab-wallet">
         <div class="wallet-header-card">
-          <div class="wallet-label">Wallet</div>
+          <div class="wallet-label-row">
+            <span class="wallet-label">Wallet</span>
+            <button class="eye-btn" id="balance-eye" onclick="toggleBalanceHidden()" title="Cacher / Afficher le solde">👁</button>
+          </div>
           <div class="wallet-balance-big" id="wallet-balance">0.00 BMAK</div>
-          <div class="wallet-addr" id="wallet-addr-display">No wallet connected</div>
+          <div class="wallet-addr" id="wallet-addr-display">Aucun wallet connecté</div>
           <div class="wallet-btns">
-            <button class="w-btn primary" onclick="showConnectWallet()">🔗 Connect</button>
-            <button class="w-btn secondary" onclick="showSend()">↑ Send</button>
-            <button class="w-btn secondary" onclick="showReceive()">↓ Receive</button>
+            <button class="w-btn metamask" onclick="connectMetaMask()" id="metamask-btn">🦊 MetaMask</button>
+            <button class="w-btn primary" onclick="showConnectWallet()">🔗 Manuel</button>
+            <button class="w-btn secondary" onclick="showSend()">↑ Envoyer</button>
+            <button class="w-btn secondary" onclick="showReceive()">↓ Recevoir</button>
           </div>
         </div>
         <div class="section-header mt16"><span>Token Assets</span></div>
