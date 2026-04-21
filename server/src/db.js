@@ -1,7 +1,10 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_BMAK_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.EXPO_PUBLIC_BMAK_SUPABASE_ANON_KEY;
 
 let supabase = null;
 

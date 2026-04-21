@@ -1,6 +1,98 @@
 const { Telegraf, Markup } = require('telegraf');
-const { pool } = require('./db');
+const { supabase } = require('./db');
 const { generateReferralCode } = require('./telegram');
+
+function getMiniAppUrl() {
+  if (process.env.MINI_APP_URL) return process.env.MINI_APP_URL;
+  const domain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN;
+  return domain ? `https://${domain}` : null;
+}
+
+async function upsertUserOnStart(ctx) {
+  if (!supabase) return;
+  const telegramId = ctx.from.id;
+  const startPayload = ctx.startPayload;
+  const code = generateReferralCode(telegramId);
+
+  let referrerRow = null;
+  if (startPayload && startPayload.startsWith('BMAK')) {
+    const { data } = await supabase
+      .from('users')
+      .select('id, telegram_id')
+      .eq('referral_code', startPayload)
+      .maybeSingle();
+    if (data && data.telegram_id !== telegramId) referrerRow = data;
+  }
+
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from('users')
+      .update({
+        username: ctx.from.username || null,
+        first_name: ctx.from.first_name || null,
+        last_name: ctx.from.last_name || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+    return;
+  }
+
+  const { data: inserted } = await supabase
+    .from('users')
+    .insert({
+      telegram_id: telegramId,
+      username: ctx.from.username || null,
+      first_name: ctx.from.first_name || null,
+      last_name: ctx.from.last_name || null,
+      referral_code: code,
+      referred_by: referrerRow ? referrerRow.telegram_id : null,
+      auth_type: 'telegram',
+    })
+    .select('id')
+    .single();
+
+  if (referrerRow && inserted) {
+    await supabase.from('referrals').insert({
+      referrer_db_id: referrerRow.id,
+      referred_db_id: inserted.id,
+      referrer_id: referrerRow.telegram_id,
+      referred_id: telegramId,
+      bonus_paid: true,
+    });
+
+    const { data: refUser } = await supabase
+      .from('users')
+      .select('bmak_balance, total_earned, total_referrals')
+      .eq('id', referrerRow.id)
+      .single();
+
+    if (refUser) {
+      await supabase
+        .from('users')
+        .update({
+          bmak_balance: Number(refUser.bmak_balance || 0) + 50,
+          total_earned: Number(refUser.total_earned || 0) + 50,
+          total_referrals: Number(refUser.total_referrals || 0) + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', referrerRow.id);
+
+      await supabase.from('transactions').insert({
+        user_db_id: referrerRow.id,
+        telegram_id: referrerRow.telegram_id,
+        type: 'referral',
+        amount: 50,
+        description: 'Referral bonus - new user joined',
+      });
+    }
+  }
+}
 
 function createBot() {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
@@ -9,72 +101,16 @@ function createBot() {
   }
 
   const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-  const domain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN;
 
   bot.start(async (ctx) => {
-    const telegramId = ctx.from.id;
-    const startPayload = ctx.startPayload;
-
-    const client = await pool.connect();
     try {
-      const code = generateReferralCode(telegramId);
-      let referredBy = null;
-
-      if (startPayload && startPayload.startsWith('BMAK')) {
-        const refRes = await client.query(
-          'SELECT telegram_id FROM users WHERE referral_code = $1',
-          [startPayload]
-        );
-        if (refRes.rows.length > 0 && refRes.rows[0].telegram_id !== telegramId) {
-          referredBy = refRes.rows[0].telegram_id;
-        }
-      }
-
-      await client.query(`
-        INSERT INTO users (telegram_id, username, first_name, last_name, referral_code, referred_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (telegram_id) DO UPDATE SET
-          username = EXCLUDED.username,
-          first_name = EXCLUDED.first_name,
-          updated_at = NOW()
-      `, [
-        telegramId,
-        ctx.from.username || null,
-        ctx.from.first_name || null,
-        ctx.from.last_name || null,
-        code,
-        referredBy,
-      ]);
-
-      if (referredBy) {
-        await client.query(
-          'INSERT INTO referrals (referrer_id, referred_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-          [referredBy, telegramId]
-        );
-        await client.query(`
-          UPDATE users SET
-            bmak_balance = bmak_balance + 50,
-            total_earned = total_earned + 50,
-            total_referrals = total_referrals + 1,
-            updated_at = NOW()
-          WHERE telegram_id = $1
-        `, [referredBy]);
-
-        await client.query(`
-          INSERT INTO transactions (telegram_id, type, amount, description)
-          VALUES ($1, 'referral', 50, 'Referral bonus - new user joined')
-        `, [referredBy]);
-
-        await client.query(
-          'UPDATE referrals SET bonus_paid = TRUE WHERE referrer_id = $1 AND referred_id = $2',
-          [referredBy, telegramId]
-        );
-      }
-    } finally {
-      client.release();
+      await upsertUserOnStart(ctx);
+    } catch (e) {
+      console.warn('[Bot] upsert error:', e.message);
     }
 
-    const miniAppUrl = domain ? `https://${domain}` : null;
+    const telegramId = ctx.from.id;
+    const miniAppUrl = getMiniAppUrl();
 
     const welcomeText = `
 🌟 *Welcome to B\\_MAK Mini App!*
@@ -106,33 +142,33 @@ Your referral code: \`${generateReferralCode(telegramId)}\`
   });
 
   bot.action('stats', async (ctx) => {
-    const client = await pool.connect();
     try {
-      const res = await client.query(
-        'SELECT * FROM users WHERE telegram_id = $1',
-        [ctx.from.id]
-      );
-      if (!res.rows.length) return ctx.answerCbQuery('User not found');
+      if (!supabase) return ctx.answerCbQuery('DB not configured');
+      const { data: u } = await supabase
+        .from('users')
+        .select('bmak_balance, total_earned, checkin_streak, total_referrals, last_checkin')
+        .eq('telegram_id', ctx.from.id)
+        .maybeSingle();
+      if (!u) return ctx.answerCbQuery('User not found');
 
-      const u = res.rows[0];
       await ctx.editMessageText(`
 📊 *Your B\\_MAK Stats*
 
-💰 Balance: *${parseFloat(u.bmak_balance).toFixed(2)} BMAK*
-🏆 Total Earned: *${parseFloat(u.total_earned).toFixed(2)} BMAK*
-🔥 Streak: *${u.checkin_streak} days*
-👥 Referrals: *${u.total_referrals}*
+💰 Balance: *${parseFloat(u.bmak_balance || 0).toFixed(2)} BMAK*
+🏆 Total Earned: *${parseFloat(u.total_earned || 0).toFixed(2)} BMAK*
+🔥 Streak: *${u.checkin_streak || 0} days*
+👥 Referrals: *${u.total_referrals || 0}*
 📅 Last Check-in: *${u.last_checkin ? new Date(u.last_checkin).toLocaleDateString() : 'Never'}*
       `.trim(), { parse_mode: 'Markdown' });
     } finally {
-      client.release();
       ctx.answerCbQuery();
     }
   });
 
   bot.action('referrals', async (ctx) => {
     const code = generateReferralCode(ctx.from.id);
-    const botUsername = ctx.botInfo?.username || 'bmak_miniapp_bot';
+    const botUsername =
+      ctx.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'B_MAK_Clean_Bot';
     const link = `https://t.me/${botUsername}?start=${code}`;
     await ctx.editMessageText(`
 👥 *Your Referral Info*
@@ -145,7 +181,23 @@ Your referral code: \`${generateReferralCode(telegramId)}\`
     ctx.answerCbQuery();
   });
 
+  bot.command('app', async (ctx) => {
+    const miniAppUrl = getMiniAppUrl();
+    if (!miniAppUrl) return ctx.reply('Mini app URL not configured.');
+    await ctx.reply(
+      'Open the B_MAK Mini App:',
+      Markup.inlineKeyboard([[Markup.button.webApp('🚀 Open B_MAK App', miniAppUrl)]])
+    );
+  });
+
   bot.on('message', (ctx) => {
+    const miniAppUrl = getMiniAppUrl();
+    if (miniAppUrl) {
+      return ctx.reply(
+        'Use /start or tap below to open the B_MAK Mini App 🚀',
+        Markup.inlineKeyboard([[Markup.button.webApp('🚀 Open B_MAK App', miniAppUrl)]])
+      );
+    }
     ctx.reply('Use /start to open the B_MAK Mini App! 🚀');
   });
 
