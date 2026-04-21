@@ -171,8 +171,7 @@
           <div class="wallet-balance-big" id="wallet-balance">0.00 BMAK</div>
           <div class="wallet-addr" id="wallet-addr-display">Aucun wallet connecté</div>
           <div class="wallet-btns">
-            <button class="w-btn metamask" onclick="connectMetaMask()" id="metamask-btn">🦊 MetaMask</button>
-            <button class="w-btn primary" onclick="showConnectWallet()">🔗 Manuel</button>
+            <button class="w-btn primary" onclick="showConnectWallet()">🔗 Connect</button>
             <button class="w-btn secondary" onclick="showSend()">↑ Envoyer</button>
             <button class="w-btn secondary" onclick="showReceive()">↓ Recevoir</button>
           </div>
@@ -196,6 +195,10 @@
           <div class="network-row"><span class="net-lbl">Chain ID</span><span class="net-val">56</span></div>
           <div class="network-row"><span class="net-lbl">Contract</span><span class="net-val contract-addr" id="contract-addr">Loading...</span></div>
         </div>
+
+        <button class="metamask-cta" id="metamask-btn" onclick="connectMetaMask()">
+          🦊 Connecter avec MetaMask
+        </button>
 
         <div id="wallet-modal" class="modal-overlay hidden">
           <div class="modal-sheet">
