@@ -187,7 +187,7 @@ Your referral code: \`${generateReferralCode(telegramId)}\`
   bot.action('referrals', async (ctx) => {
     const code = generateReferralCode(ctx.from.id);
     const botUsername =
-      ctx.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'B_MAK_Clean_Bot';
+      ctx.botInfo?.username || process.env.TELEGRAM_BOT_USERNAME || 'B_MAK_officiel_bot';
     const link = `https://t.me/${botUsername}?start=${code}`;
     await ctx.editMessageText(`
 👥 *Your Referral Info*

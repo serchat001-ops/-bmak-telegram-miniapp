@@ -55,7 +55,7 @@ app.get('/api/config', (req, res) => {
     adminEmails: (process.env.ADMIN_EMAILS ||
       'ben.makoma98@gmail.com,serchat001@gmail.com,officielbmak@gmail.com')
       .split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
-    botUsername: process.env.TELEGRAM_BOT_USERNAME || 'B_MAK_Clean_Bot',
+    botUsername: process.env.TELEGRAM_BOT_USERNAME || 'B_MAK_officiel_bot',
   });
 });
 
