@@ -112,6 +112,25 @@ function createBot() {
     const telegramId = ctx.from.id;
     const miniAppUrl = getMiniAppUrl();
 
+    // Show pending notifications on /start
+    if (supabase) {
+      try {
+        const { data: u } = await supabase.from('users').select('id').eq('telegram_id', telegramId).maybeSingle();
+        if (u) {
+          const { data: notifs } = await supabase
+            .from('notifications').select('*')
+            .eq('user_id', u.id).eq('read', false)
+            .order('created_at', { ascending: false }).limit(5);
+          if (notifs && notifs.length > 0) {
+            const lines = notifs.map(n => `📬 *${n.title}*\n${n.message}`).join('\n\n');
+            await ctx.replyWithMarkdown(lines);
+            await supabase.from('notifications').update({ read: true })
+              .eq('user_id', u.id).eq('read', false);
+          }
+        }
+      } catch (e) { /* silent */ }
+    }
+
     const welcomeText = `
 🌟 *Welcome to B\\_MAK Mini App!*
 
@@ -188,6 +207,45 @@ Your referral code: \`${generateReferralCode(telegramId)}\`
       'Open the B_MAK Mini App:',
       Markup.inlineKeyboard([[Markup.button.webApp('🚀 Open B_MAK App', miniAppUrl)]])
     );
+  });
+
+  bot.command('claim', async (ctx) => {
+    const miniAppUrl = getMiniAppUrl();
+    if (!supabase) return ctx.reply('Service indisponible.');
+    const { data: u } = await supabase
+      .from('users')
+      .select('bmak_balance, wallet_address')
+      .eq('telegram_id', ctx.from.id).maybeSingle();
+    const min = parseInt(process.env.MIN_RECLAIM_AMOUNT || '1500', 10);
+    const bal = Number(u?.bmak_balance || 0);
+    if (!u) return ctx.reply('Compte introuvable. Tapez /start pour vous inscrire.');
+    if (!u.wallet_address) {
+      const kb = miniAppUrl
+        ? Markup.inlineKeyboard([[Markup.button.webApp('🔗 Connecter wallet', miniAppUrl)]])
+        : undefined;
+      return ctx.reply('⚠️ Connectez d\'abord votre wallet BSC dans la mini app.', kb);
+    }
+    if (bal < min) return ctx.reply(`💰 Solde minimum requis : ${min} B_MAK\n(Solde actuel : ${bal.toLocaleString('fr-FR')})`);
+
+    const kb = miniAppUrl
+      ? Markup.inlineKeyboard([[Markup.button.webApp('💰 Réclamer dans l\'app', miniAppUrl)]])
+      : undefined;
+    return ctx.reply(`✅ Vous êtes éligible !\nSolde : ${bal.toLocaleString('fr-FR')} B_MAK\nWallet : ${u.wallet_address.slice(0,6)}...${u.wallet_address.slice(-4)}\n\nOuvrez la mini app pour confirmer la demande.`, kb);
+  });
+
+  bot.command('balance', async (ctx) => {
+    if (!supabase) return ctx.reply('Service indisponible.');
+    const { data: u } = await supabase
+      .from('users')
+      .select('bmak_balance, total_earned, checkin_streak, total_referrals')
+      .eq('telegram_id', ctx.from.id).maybeSingle();
+    if (!u) return ctx.reply('Compte introuvable. Tapez /start.');
+    return ctx.replyWithMarkdown(`
+💰 *Solde* : ${Number(u.bmak_balance||0).toLocaleString('fr-FR')} B\\_MAK
+🏆 *Total gagné* : ${Number(u.total_earned||0).toLocaleString('fr-FR')} B\\_MAK
+🔥 *Streak* : ${u.checkin_streak||0} jours
+👥 *Filleuls* : ${u.total_referrals||0}
+    `.trim());
   });
 
   bot.on('message', (ctx) => {

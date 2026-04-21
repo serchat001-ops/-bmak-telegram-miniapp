@@ -81,6 +81,9 @@
               <span id="header-balance">0</span>
               <span class="chip-label">BMAK</span>
             </div>
+            <button class="notif-bell" id="notif-bell" onclick="showNotifications()" title="Notifications">
+              🔔<span class="notif-badge hidden" id="notif-badge">0</span>
+            </button>
             <div class="avatar-mini" id="header-avatar" onclick="showProfileMenu()">👤</div>
           </div>
         </div>
@@ -139,6 +142,15 @@
         </div>
 
         <div class="streak-info" id="streak-info"></div>
+
+        <div class="reclaim-card hidden" id="reclaim-card">
+          <div class="reclaim-icon">💰</div>
+          <div class="reclaim-info">
+            <div class="reclaim-title">Réclamer vos B_MAK</div>
+            <div class="reclaim-desc">Transfert on-chain vers votre wallet BSC (<span id="reclaim-amount">0</span> B_MAK)</div>
+          </div>
+          <button class="reclaim-btn" id="reclaim-btn" onclick="doReclaim()">Réclamer</button>
+        </div>
 
         <div class="section-header">
           <span>Recent Activity</span>

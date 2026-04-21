@@ -2,7 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { supabase } = require('../db');
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ||
+  process.env.ADMIN_EMAIL ||
+  'ben.makoma98@gmail.com,serchat001@gmail.com,officielbmak@gmail.com')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+function isAdminEmail(email) {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
 
 // ─── Admin Auth Middleware ────────────────────────────────────────────────────
 async function requireAdmin(req, res, next) {
@@ -16,7 +23,7 @@ async function requireAdmin(req, res, next) {
     .maybeSingle();
 
   if (!user) return res.status(401).json({ error: 'Session invalide' });
-  if (!ADMIN_EMAIL || user.email !== ADMIN_EMAIL) {
+  if (!isAdminEmail(user.email)) {
     return res.status(403).json({ error: 'Accès refusé — administrateur uniquement' });
   }
 

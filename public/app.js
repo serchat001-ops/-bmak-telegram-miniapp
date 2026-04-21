@@ -258,7 +258,7 @@ async function finishInit(skipSplash = false) {
     if (el) el.textContent = state.config.contractAddress ? shorten(state.config.contractAddress) : 'Not deployed';
   }
 
-  await Promise.all([loadTransactions(), loadReferrals()]);
+  await Promise.all([loadTransactions(), loadReferrals(), loadNotifications()]);
 }
 
 // ─── Render Mode UI ────────────────────────────────────────────────────────────
@@ -282,9 +282,11 @@ function renderModeUI() {
   if (pmName) pmName.textContent = state.user?.display_name || state.user?.first_name || 'User';
   if (pmType) pmType.textContent = state.mode === 'telegram' ? '📱 Telegram Account' : '🌐 Web Account';
 
-  // Show admin button if this user is the administrator
+  // Show admin button if this user is in the admin allowlist
   const adminBtn = document.getElementById('pm-admin-btn');
-  if (adminBtn && state.config?.adminEmail && state.user?.email === state.config.adminEmail) {
+  const adminEmails = state.config?.adminEmails || (state.config?.adminEmail ? [state.config.adminEmail] : []);
+  const userEmail = state.user?.email?.toLowerCase();
+  if (adminBtn && userEmail && adminEmails.map(e => e.toLowerCase()).includes(userEmail)) {
     adminBtn.classList.remove('hidden');
   }
 }
@@ -353,6 +355,69 @@ function renderUser() {
   // Profile menu
   const pmName = el('pm-name');
   if (pmName) pmName.textContent = name;
+
+  // Reclaim button visibility (balance >= min and wallet present)
+  const reclaimCard = el('reclaim-card');
+  if (reclaimCard) {
+    const min = state.config?.minReclaimAmount || 1500;
+    const eligible = !!u.wallet_address && parseFloat(u.bmak_balance || 0) >= min;
+    reclaimCard.classList.toggle('hidden', !eligible);
+    const reclaimAmount = el('reclaim-amount');
+    if (reclaimAmount) reclaimAmount.textContent = fmtNum(bal, 0);
+  }
+}
+
+// ─── Reclamations ─────────────────────────────────────────────────────────────
+async function doReclaim() {
+  if (!state.user) return;
+  const min = state.config?.minReclaimAmount || 1500;
+  if (!state.user.wallet_address) return showToast('Connectez d\'abord votre wallet BSC');
+  if (parseFloat(state.user.bmak_balance || 0) < min) return showToast(`Solde minimum : ${min} B_MAK`);
+  if (!confirm(`Demander le transfert de ${fmtNum(state.user.bmak_balance, 0)} B_MAK vers ${shorten(state.user.wallet_address)} ?`)) return;
+  const btn = el('reclaim-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi...'; }
+  try {
+    await apiFetch('/api/reclamations', 'POST', {
+      userId: state.user.id,
+      webUid: localStorage.getItem('bmak_web_uid'),
+    });
+    showToast('Demande envoyée ! L\'admin la traitera bientôt.', 'green');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Demande en attente'; }
+  } catch (e) {
+    showToast(e.message || 'Erreur lors de la demande');
+    if (btn) { btn.disabled = false; btn.textContent = '💰 Réclamer mes B_MAK'; }
+  }
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+async function loadNotifications() {
+  if (!state.user) return;
+  try {
+    const data = await apiFetch(`/api/notifications/${state.user.id}`, 'GET');
+    state.notifications = (data.notifications || []).filter(n => !n.read);
+    const badge = el('notif-badge');
+    if (badge) {
+      const count = state.notifications.length;
+      badge.textContent = count > 9 ? '9+' : count;
+      badge.classList.toggle('hidden', count === 0);
+    }
+  } catch (e) {}
+}
+
+async function showNotifications() {
+  await loadNotifications();
+  const notifs = state.notifications || [];
+  if (notifs.length === 0) return showToast('Aucune nouvelle notification');
+  const msg = notifs.slice(0, 5).map(n =>
+    `📬 ${n.title}\n${n.message}`
+  ).join('\n\n');
+  alert(msg);
+  try {
+    await apiFetch(`/api/notifications/${state.user.id}/read-all`, 'PATCH');
+    state.notifications = [];
+    const badge = el('notif-badge');
+    if (badge) badge.classList.add('hidden');
+  } catch (e) {}
 }
 
 function updateMilestone(id, streak, target) {

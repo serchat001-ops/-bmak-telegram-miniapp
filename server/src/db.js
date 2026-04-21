@@ -67,6 +67,32 @@ CREATE TABLE IF NOT EXISTS referrals (
   bonus_paid BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS reclamations (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  amount NUMERIC(20,4) NOT NULL,
+  wallet_address TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',
+  reject_reason TEXT,
+  processed_by INTEGER,
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  type TEXT,
+  title TEXT,
+  message TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Optional column on users:
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_sent BOOLEAN DEFAULT FALSE;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_sent_at TIMESTAMPTZ;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_sent_amount NUMERIC(20,4);
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
     `);
   } else if (checkErr) {
     console.warn('[DB] Check warning:', checkErr.message);

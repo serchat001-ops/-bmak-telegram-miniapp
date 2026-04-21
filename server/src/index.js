@@ -10,6 +10,8 @@ const rewardsRouter = require('./routes/rewards');
 const transactionsRouter = require('./routes/transactions');
 const adminRouter = require('./routes/admin');
 const walletRouter = require('./routes/wallet');
+const reclamationsRouter = require('./routes/reclamations');
+const notificationsRouter = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -36,6 +38,8 @@ app.use('/api/rewards', rewardsRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/wallet', walletRouter);
+app.use('/api/reclamations', reclamationsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.get('/api/config', (req, res) => {
   res.json({
@@ -46,7 +50,12 @@ app.get('/api/config', (req, res) => {
     tokenSymbol: 'BMAK',
     dailyReward: 100,
     referralReward: 50,
+    minReclaimAmount: parseInt(process.env.MIN_RECLAIM_AMOUNT || '1500', 10),
     adminEmail: process.env.ADMIN_EMAIL || null,
+    adminEmails: (process.env.ADMIN_EMAILS ||
+      'ben.makoma98@gmail.com,serchat001@gmail.com,officielbmak@gmail.com')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
+    botUsername: process.env.TELEGRAM_BOT_USERNAME || 'B_MAK_Clean_Bot',
   });
 });
 
