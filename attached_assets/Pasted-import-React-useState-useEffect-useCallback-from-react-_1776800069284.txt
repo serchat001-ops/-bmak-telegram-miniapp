@@ -1,0 +1,1255 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  SafeAreaView, View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  TextInput, FlatList, Alert, ActivityIndicator, Image, KeyboardAvoidingView,
+  Platform, StatusBar, RefreshControl, Linking, Share
+} from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import bcrypt from 'bcryptjs';
+import { bmakSupabase, bmakConfigured } from '../../supabase/bmakClient';
+
+const KEY_SESSION = 'bmak_session_id';
+const KEY_PROFILE = 'bmak_cached_profile';
+const KEY_ADMIN   = 'bmak_admin_uid';
+const bmakLogo    = require('../../assets/bmak_logo_nobg.png');
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const ADMIN_EMAILS = ['ben.makoma98@gmail.com', 'serchat001@gmail.com', 'officielbmak@gmail.com'];
+
+function isAdminEmail(email) {
+  return ADMIN_EMAILS.includes(email?.toLowerCase());
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 10);
+}
+
+async function verifyPassword(password, hash) {
+  return bcrypt.compare(password, hash);
+}
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function canCheckinToday(profile) {
+  if (!profile?.last_checkin) return true;
+  const last = typeof profile.last_checkin === 'string'
+    ? profile.last_checkin.slice(0, 10)
+    : new Date(profile.last_checkin).toISOString().slice(0, 10);
+  return last !== todayStr();
+}
+
+function genCode(len = 6) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < len; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function cacheProfile(user) {
+  if (!user) return;
+  await AsyncStorage.setItem(KEY_PROFILE, JSON.stringify(user));
+}
+
+// ─── Hook useBmakSession (exporté pour Programs.js) ───────────────────────────
+export function useBmakSession() {
+  const [bmakBalance, setBmakBalance] = useState(null);
+  const [bmakStreak,  setBmakStreak]  = useState(0);
+
+  const syncFromUser = useCallback((user) => {
+    if (!user) return;
+    if (user.bmak_balance  != null) setBmakBalance(user.bmak_balance);
+    if (user.checkin_streak != null) setBmakStreak(user.checkin_streak);
+  }, []);
+
+  const restoreSession = useCallback(async () => {
+    const cached = await AsyncStorage.getItem(KEY_PROFILE);
+    if (!cached) return null;
+    try {
+      const user = JSON.parse(cached);
+      syncFromUser(user);
+      // Rafraîchissement silencieux depuis Supabase
+      const uid = await AsyncStorage.getItem(KEY_SESSION);
+      if (uid) {
+        bmakSupabase.from('users').select('*').eq('id', uid).single()
+          .then(({ data }) => { if (data) { syncFromUser(data); cacheProfile(data); } })
+          .catch(() => {});
+      }
+      return user;
+    } catch { return null; }
+  }, [syncFromUser]);
+
+  const fetchBalance = useCallback(async () => {
+    const uid = await AsyncStorage.getItem(KEY_SESSION);
+    if (!uid) return;
+    const { data } = await bmakSupabase.from('users').select('*').eq('id', uid).single();
+    if (data) { syncFromUser(data); await cacheProfile(data); }
+  }, [syncFromUser]);
+
+  const clearSession = useCallback(async () => {
+    await AsyncStorage.multiRemove([KEY_SESSION, KEY_PROFILE, KEY_ADMIN]);
+    setBmakBalance(null); setBmakStreak(0);
+  }, []);
+
+  return { bmakBalance, bmakStreak, restoreSession, fetchBalance, clearSession, syncFromUser };
+}
+
+// ─── Écran Connexion ──────────────────────────────────────────────────────────
+function LoginScreen({ onSuccess }) {
+  const [mode, setMode]         = useState('login');
+  const [name, setName]         = useState('');
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [showPwd, setShowPwd]   = useState(false);
+  const [err, setErr]           = useState('');
+
+  const submit = async () => {
+    setErr('');
+    if (!email.trim() || !password) { setErr('Email et mot de passe requis.'); return; }
+    if (mode === 'register' && !name.trim()) { setErr('Le nom est requis.'); return; }
+    setLoading(true);
+    try {
+      if (mode === 'login') {
+        // Étape 1 : récupérer l'utilisateur par email
+        const { data: emailCheck, error: emailErr } = await bmakSupabase
+          .from('users')
+          .select('*')
+          .eq('email', email.trim().toLowerCase())
+          .single();
+        if (emailErr) {
+          const code = emailErr?.code;
+          if (code === 'PGRST116') {
+            setErr('Aucun compte trouvé avec cet email. Veuillez vous inscrire.');
+          } else {
+            setErr(`Erreur [${code}]: ${emailErr.message}`);
+          }
+          return;
+        }
+        if (!emailCheck) { setErr('Aucun compte trouvé avec cet email.'); return; }
+        // Étape 2 : vérifier le mot de passe avec bcrypt
+        const passwordOk = await verifyPassword(password.trim(), emailCheck.password_hash);
+        if (!passwordOk) { setErr('Mot de passe incorrect.'); return; }
+        // Étape 3 : session
+        await AsyncStorage.setItem(KEY_SESSION, String(emailCheck.id));
+        await cacheProfile(emailCheck);
+        if (isAdminEmail(emailCheck.email)) await AsyncStorage.setItem(KEY_ADMIN, String(emailCheck.id));
+        onSuccess(emailCheck);
+      } else {
+        // Vérifier si email déjà utilisé
+        const { data: existing } = await bmakSupabase
+          .from('users').select('id').eq('email', email.trim().toLowerCase()).single();
+        if (existing) { setErr('Cet email est déjà utilisé.'); return; }
+        // Générer un code de parrainage unique
+        let code = genCode();
+        const { data: codeExists } = await bmakSupabase
+          .from('users').select('id').eq('referral_code', code).single();
+        if (codeExists) code = genCode(7);
+        // Hacher le mot de passe avec bcrypt
+        const hash = await hashPassword(password.trim());
+        const { data: newUser, error } = await bmakSupabase
+          .from('users')
+          .insert({
+            email: email.trim().toLowerCase(),
+            password_hash: hash,
+            display_name: name.trim(),
+            auth_type: 'email',
+            referral_code: code,
+            bmak_balance: 0,
+            checkin_streak: 0,
+            total_earned: 0,
+            total_referrals: 0,
+          })
+          .select('*')
+          .single();
+        if (error || !newUser) { setErr(error?.message || 'Erreur lors de l\'inscription.'); return; }
+        await AsyncStorage.setItem(KEY_SESSION, String(newUser.id));
+        await cacheProfile(newUser);
+        onSuccess(newUser);
+      }
+    } catch (e) {
+      setErr(e.message || 'Une erreur est survenue.');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={S.loginContainer} keyboardShouldPersistTaps="handled">
+      <View style={S.loginLogo}>
+        <Image source={bmakLogo} style={S.loginLogoImg} resizeMode="contain" />
+        <Text style={S.loginTitle}>B_MAK</Text>
+        <Text style={S.loginSub}>Digital Token • Community & Growth</Text>
+      </View>
+
+      <View style={S.tabs}>
+        {['login','register'].map(m => (
+          <TouchableOpacity key={m} style={[S.tab, mode===m && S.tabActive]} onPress={()=>{setMode(m);setErr('');}}>
+            <Text style={[S.tabTxt, mode===m && S.tabTxtActive]}>{m==='login'?'Connexion':'Inscription'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={S.form}>
+        {mode==='register' && (
+          <View style={S.inp}>
+            <Ionicons name="person-outline" size={18} color="#8b8bba" style={S.inpIcon}/>
+            <TextInput style={S.inpField} placeholder="Nom d'affichage" placeholderTextColor="#4a4a7a"
+              value={name} onChangeText={setName} autoCapitalize="words"/>
+          </View>
+        )}
+        <View style={S.inp}>
+          <Ionicons name="mail-outline" size={18} color="#8b8bba" style={S.inpIcon}/>
+          <TextInput style={S.inpField} placeholder="Adresse email" placeholderTextColor="#4a4a7a"
+            value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none"/>
+        </View>
+        <View style={S.inp}>
+          <Ionicons name="lock-closed-outline" size={18} color="#8b8bba" style={S.inpIcon}/>
+          <TextInput style={[S.inpField,{flex:1}]} placeholder="Mot de passe" placeholderTextColor="#4a4a7a"
+            value={password} onChangeText={setPassword} secureTextEntry={!showPwd}/>
+          <TouchableOpacity onPress={()=>setShowPwd(v=>!v)} style={{padding:4}}>
+            <Ionicons name={showPwd?'eye-off-outline':'eye-outline'} size={18} color="#8b8bba"/>
+          </TouchableOpacity>
+        </View>
+        {err ? <Text style={S.errTxt}>{err}</Text> : null}
+        <TouchableOpacity style={S.submitBtn} onPress={submit} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff"/> :
+            <Text style={S.submitTxt}>{mode==='login'?'Se connecter':'Créer un compte'}</Text>}
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+function Dashboard({ initUser, onLogout, syncFromUser }) {
+  const [profile, setProfile]       = useState(initUser);
+  const [transactions, setTxs]      = useState([]);
+  const [referrals, setReferrals]   = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [tab, setTab]               = useState('home');
+  const [refreshing, setRefreshing] = useState(false);
+  const [ciLoading, setCILoading]   = useState(false);
+  // Reclamation
+  const [reclaimLoading, setReclaimLoading] = useState(false);
+  // Wallet
+  const [wallet, setWallet]         = useState(initUser?.wallet_address || '');
+  const [savingWallet, setSavingWallet] = useState(false);
+  // Admin
+  const [isAdmin, setIsAdmin]       = useState(isAdminEmail(initUser?.email));
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminTab, setAdminTab]     = useState('stats');
+  const [reclamations, setReclamations] = useState([]);
+  const [processingReclaim, setProcessingReclaim] = useState(null);
+  const [logoTaps, setLogoTaps]     = useState(0);
+  const [showAdmin, setShowAdmin]   = useState(isAdminEmail(initUser?.email));
+
+  const updateProfile = useCallback(async (updated) => {
+    setProfile(updated);
+    syncFromUser(updated);
+    await cacheProfile(updated);
+  }, [syncFromUser]);
+
+  const loadProfile = useCallback(async () => {
+    const uid = await AsyncStorage.getItem(KEY_SESSION);
+    if (!uid) return;
+    const { data } = await bmakSupabase.from('users').select('*').eq('id', uid).single();
+    if (data) { await updateProfile(data); }
+  }, [updateProfile]);
+
+  const loadTxs = useCallback(async () => {
+    const uid = await AsyncStorage.getItem(KEY_SESSION);
+    if (!uid) return;
+    const { data } = await bmakSupabase.from('transactions')
+      .select('*').eq('user_db_id', uid).order('created_at', { ascending: false }).limit(50);
+    setTxs(data || []);
+  }, []);
+
+  const loadRefs = useCallback(async () => {
+    if (!profile?.id) return;
+    const { data } = await bmakSupabase.from('users')
+      .select('id, display_name, created_at').eq('referred_by', profile.id);
+    setReferrals(data || []);
+  }, [profile?.id]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!profile?.id) return;
+    const { data } = await bmakSupabase.from('notifications')
+      .select('*')
+      .eq('user_id', profile.id)
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    return data || [];
+  }, [profile?.id]);
+
+  const doRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadProfile(), loadTxs(), loadRefs()]);
+    const notifs = await loadNotifications();
+    setNotifications(notifs);
+    setRefreshing(false);
+  }, [loadProfile, loadTxs, loadRefs, loadNotifications]);
+
+  useEffect(() => {
+    loadProfile(); loadTxs();
+    AsyncStorage.getItem(KEY_ADMIN).then(v => { if (v) { setIsAdmin(true); setShowAdmin(true); } });
+  }, []);
+
+  // ── Check-in ─────────────────────────────────────────────────────────────
+  const doCheckin = async () => {
+    if (!canCheckinToday(profile)) {
+      Alert.alert('Déjà effectué ✓', 'Check-in déjà réalisé aujourd\'hui.\nRevenez demain pour continuer votre streak 🔥');
+      return;
+    }
+    setCILoading(true);
+    try {
+      const uid     = await AsyncStorage.getItem(KEY_SESSION);
+      const reward  = 100;
+      const newStreak = (profile.checkin_streak || 0) + 1;
+      // Bonus de streak
+      let bonus = 0;
+      if (newStreak % 30 === 0) bonus = 3000;
+      else if (newStreak % 14 === 0) bonus = 1000;
+      else if (newStreak % 7 === 0) bonus = 500;
+      const total    = reward + bonus;
+      const newBal   = parseFloat(profile.bmak_balance || 0) + total;
+      const newEarned = parseFloat(profile.total_earned || 0) + total;
+
+      const { error } = await bmakSupabase.from('users').update({
+        bmak_balance:   newBal,
+        checkin_streak: newStreak,
+        last_checkin:   todayStr(),
+        total_earned:   newEarned,
+      }).eq('id', uid);
+
+      if (error) throw new Error(error.message);
+
+      // Insérer la transaction
+      const txRows = [{ user_db_id: parseInt(uid), type: 'checkin', amount: reward, description: `Check-in jour ${newStreak}` }];
+      if (bonus > 0) txRows.push({ user_db_id: parseInt(uid), type: 'streak_bonus', amount: bonus, description: `Bonus streak ${newStreak} jours 🔥` });
+      await bmakSupabase.from('transactions').insert(txRows);
+
+      const updated = { ...profile, bmak_balance: newBal, checkin_streak: newStreak, last_checkin: todayStr(), total_earned: newEarned };
+      await updateProfile(updated);
+      loadTxs();
+
+      Alert.alert('✅ Check-in réussi !',
+        `+${reward} B_MAK gagnés${bonus ? `\n🔥 Bonus streak +${bonus} B_MAK !` : ''}\n\nStreak : ${newStreak} jours • Solde : ${newBal.toLocaleString('fr-FR')} B_MAK`);
+    } catch (e) {
+      Alert.alert('Erreur', e.message || 'Impossible d\'effectuer le check-in.');
+    } finally { setCILoading(false); }
+  };
+
+  // Réclamation
+  const doReclaim = async () => {
+    if (!profile?.wallet_address) {
+      Alert.alert('Wallet requis', 'Veuillez configurer votre adresse BSC avant de réclamer.');
+      return;
+    }
+    if (Number(profile?.bmak_balance || 0) < 1500) {
+      Alert.alert('Solde insuffisant', 'Vous devez avoir au moins 1500 B_MAK pour réclamer.');
+      return;
+    }
+
+    setReclaimLoading(true);
+    try {
+      const uid = await AsyncStorage.getItem(KEY_SESSION);
+      const { data: existingReclaim } = await bmakSupabase
+        .from('reclamations')
+        .select('*')
+        .eq('user_id', uid)
+        .eq('status', 'pending')
+        .single();
+
+      if (existingReclaim) {
+        Alert.alert('Demande en cours', 'Vous avez déjà une demande de réclamation en attente.');
+        return;
+      }
+
+      const { error } = await bmakSupabase.from('reclamations').insert({
+        user_id: parseInt(uid),
+        amount: Number(profile.bmak_balance),
+        wallet_address: profile.wallet_address,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw new Error(error.message);
+
+      Alert.alert('Demande envoyée !', 
+        `Votre demande de ${Number(profile.bmak_balance).toLocaleString('fr-FR')} B_MAK a été soumise.\nL\'administrateur la traitera rapidement.`);
+    } catch (e) {
+      Alert.alert('Erreur', e.message || 'Impossible de soumettre la demande.');
+    } finally { setReclaimLoading(false); }
+  };
+
+  // Wallet BSC ────────────────────────────────────────────────────────────
+  const saveWallet = async () => {
+    const trimmed = wallet.trim();
+    if (!trimmed.match(/^0x[a-fA-F0-9]{40}$/)) {
+      Alert.alert('Adresse invalide', 'L\'adresse BSC doit commencer par 0x et contenir 42 caractères (ex: 0xAbc...)'); return;
+    }
+    const uid = await AsyncStorage.getItem(KEY_SESSION);
+    if (!uid) return;
+    setSavingWallet(true);
+    const { error } = await bmakSupabase.from('users').update({ wallet_address: trimmed }).eq('id', uid);
+    setSavingWallet(false);
+    if (error) { Alert.alert('Erreur', error.message); return; }
+    const updated = { ...profile, wallet_address: trimmed };
+    await updateProfile(updated);
+    Alert.alert('✅ Wallet connecté !',
+      'Votre adresse BSC est enregistrée.\nVos B_MAK seront transférés on-chain lors du prochain paiement.');
+  };
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  const loadAdminStats = useCallback(async () => {
+    const [totalR, walletR, paidR] = await Promise.all([
+      bmakSupabase.from('users').select('*', { count: 'exact', head: true }),
+      bmakSupabase.from('users').select('*', { count: 'exact', head: true }).not('wallet_address', 'is', null),
+      bmakSupabase.from('users').select('*', { count: 'exact', head: true }).eq('payout_sent', true),
+    ]);
+    const { data: pendingData } = await bmakSupabase
+      .from('users').select('bmak_balance').eq('payout_sent', false).not('wallet_address', 'is', null);
+    const bmakPending = (pendingData || []).reduce((acc, u) => acc + parseFloat(u.bmak_balance || 0), 0);
+    setAdminStats({
+      total: totalR.count || 0,
+      wallets: walletR.count || 0,
+      paid: paidR.count || 0,
+      pending: (totalR.count || 0) - (paidR.count || 0),
+      bmakPending: bmakPending.toFixed(0),
+    });
+  }, []);
+
+  const loadAdminUsers = useCallback(async (search = '') => {
+    let q = bmakSupabase.from('users').select('*').order('created_at', { ascending: false }).limit(100);
+    if (search) q = q.or(`display_name.ilike.%${search}%,email.ilike.%${search}%`);
+    const { data } = await q;
+    setAdminUsers(data || []);
+  }, []);
+
+  const markPaid = async (userId) => {
+    Alert.alert('Confirmer', 'Marquer cet utilisateur comme payé ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Confirmer', onPress: async () => {
+        // Remettre le solde à zéro et marquer comme payé pour éviter les doubles paiements
+        await bmakSupabase.from('users').update({ 
+          payout_sent: true,
+          bmak_balance: 0 
+        }).eq('id', userId);
+        loadAdminUsers(adminSearch);
+        loadAdminStats();
+      }},
+    ]);
+  };
+
+  const markUnpaid = async (userId) => {
+    await bmakSupabase.from('users').update({ payout_sent: false }).eq('id', userId);
+    loadAdminUsers(adminSearch);
+    loadAdminStats();
+  };
+
+  const grantAdmin = async (userId) => {
+    Alert.alert('Information', 'Les droits admin sont gérés par email (ben.makoma98@gmail.com, serchat001@gmail.com, officielbmak@gmail.com).');
+  };
+
+  // Réclamations
+  const loadReclamations = useCallback(async () => {
+    const { data } = await bmakSupabase
+      .from('reclamations')
+      .select('*, users(display_name, email, wallet_address)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    setReclamations(data || []);
+  }, []);
+
+  const processReclamation = async (reclaimId, userId, amount, userWallet) => {
+    setProcessingReclaim(reclaimId);
+    try {
+      // Ici, vous devrez implémenter le transfert BSC réel
+      // Pour l'instant, nous allons simuler et mettre à jour la base de données
+      
+      // 1. Mettre à jour le statut de la réclamation
+      await bmakSupabase.from('reclamations')
+        .update({ status: 'processed', processed_at: new Date().toISOString() })
+        .eq('id', reclaimId);
+
+      // 2. Remettre le solde utilisateur à zéro
+      await bmakSupabase.from('users')
+        .update({ bmak_balance: 0 })
+        .eq('id', userId);
+
+      // 3. Insérer la transaction
+      await bmakSupabase.from('transactions').insert({
+        user_db_id: userId,
+        type: 'reclaim_processed',
+        amount: amount,
+        description: `Réclamation traitée - Transfert BSC de ${amount} B_MAK`,
+        created_at: new Date().toISOString()
+      });
+
+      // 4. Notifier l'utilisateur que sa réclamation a été traitée
+      await bmakSupabase.from('notifications').insert({
+        user_id: userId,
+        type: 'reclaim_processed',
+        title: 'Réclamation traitée !',
+        message: `Votre réclamation de ${amount.toLocaleString('fr-FR')} B_MAK a été traitée et transférée vers votre wallet BSC: ${userWallet}`,
+        read: false,
+        created_at: new Date().toISOString()
+      });
+
+      Alert.alert('Réclamation traitée !', 
+        `${amount} B_MAK transférés vers ${userWallet}\n\nL'utilisateur a été notifié et son solde a été remis à zéro.`);
+      
+      loadReclamations();
+      loadAdminUsers(adminSearch);
+      loadAdminStats();
+    } catch (e) {
+      Alert.alert('Erreur', e.message || 'Impossible de traiter la réclamation.');
+    } finally {
+      setProcessingReclaim(null);
+    }
+  };
+
+  const handleLogoTap = () => {
+    const next = logoTaps + 1;
+    setLogoTaps(next);
+    if (next >= 5) { setShowAdmin(true); setLogoTaps(0); }
+  };
+
+  const showNotifications = async () => {
+    const notifs = await loadNotifications();
+    if (notifs.length === 0) {
+      Alert.alert('Notifications', 'Aucune nouvelle notification.');
+      return;
+    }
+
+    // Marquer toutes les notifications comme lues
+    await bmakSupabase.from('notifications')
+      .update({ read: true })
+      .eq('user_id', profile.id)
+      .eq('read', false);
+
+    setNotifications([]);
+
+    // Afficher les notifications
+    const message = notifs.map(n => `(${new Date(n.created_at).toLocaleDateString('fr-FR')}) ${n.title}\n${n.message}`).join('\n\n');
+    Alert.alert('Notifications', message);
+  };
+
+  const txColor = (type) => ({
+    checkin: '#4ade80', streak_bonus: '#fb923c', referral_bonus: '#60a5fa',
+  }[type] || '#a78bfa');
+  const txIcon = (type) => ({
+    checkin: 'calendar-outline', streak_bonus: 'flame-outline', referral_bonus: 'people-outline',
+  }[type] || 'swap-horizontal-outline');
+
+  const checkinOk = canCheckinToday(profile);
+
+  const TABS = [
+    { id:'home',    icon:'home-outline',    label:'Accueil' },
+    { id:'wallet',  icon:'wallet-outline',  label:'Wallet' },
+    { id:'history', icon:'receipt-outline', label:'Historique' },
+    { id:'refer',   icon:'people-outline',  label:'Parrainage' },
+    ...(showAdmin ? [{ id:'admin', icon:'shield-outline', label:'Admin' }] : []),
+  ];
+
+  return (
+    <ScrollView style={S.scroll} contentContainerStyle={{paddingBottom:40}}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={doRefresh} tintColor="#a78bfa"/>}>
+
+      {/* Header */}
+      <LinearGradient colors={['#1a0a3a','#0f0f2a']} style={S.dashHeader}>
+        <TouchableOpacity onPress={handleLogoTap} activeOpacity={0.9}>
+          <Image source={bmakLogo} style={S.dashLogo} resizeMode="contain"/>
+        </TouchableOpacity>
+        <View style={{flex:1}}>
+          <Text style={S.dashName}>{profile?.display_name || 'Utilisateur'}</Text>
+          <Text style={S.dashSub}>B_MAK Digital Token</Text>
+        </View>
+        <TouchableOpacity onPress={showNotifications} style={S.notificationBtn}>
+          <Ionicons name="notifications-outline" size={20} color="#a78bfa"/>
+          {notifications.length > 0 && (
+            <View style={S.notificationBadge}>
+              <Text style={S.notificationBadgeTxt}>{notifications.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onLogout} style={S.logoutBtn}>
+          <Ionicons name="log-out-outline" size={20} color="#f87171"/>
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* Onglets */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={S.tabsScroll}>
+        {TABS.map(t => (
+          <TouchableOpacity key={t.id} style={[S.tabItem, tab===t.id && S.tabItemActive]}
+            onPress={() => {
+              setTab(t.id);
+              if (t.id==='history') loadTxs();
+              if (t.id==='refer') loadRefs();
+              if (t.id==='admin') { loadAdminStats(); loadAdminUsers(); }
+            }}>
+            <Ionicons name={t.icon} size={16} color={tab===t.id?'#a78bfa':'#6b7280'}/>
+            <Text style={[S.tabItemTxt, tab===t.id && S.tabItemTxtActive]}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* ══ ACCUEIL ══════════════════════════════════════════════════════════ */}
+      {tab==='home' && (
+        <View style={S.content}>
+          {/* Carte solde */}
+          <LinearGradient colors={['#2d1b69','#1e1a5e']} style={S.balanceCard}>
+            <TouchableOpacity onPress={handleLogoTap} activeOpacity={0.9}>
+              <Image source={bmakLogo} style={S.balanceLogo} resizeMode="contain"/>
+            </TouchableOpacity>
+            <Text style={S.balanceLabel}>Solde B_MAK</Text>
+            <Text style={S.balanceValue}>{Number(profile?.bmak_balance||0).toLocaleString('fr-FR')}</Text>
+            <Text style={S.balanceSub}>Total gagné : {Number(profile?.total_earned||0).toLocaleString('fr-FR')} B_MAK</Text>
+            <View style={S.statsRow}>
+              <View style={S.statBox}>
+                <Text style={S.statNum}>🔥 {profile?.checkin_streak||0}</Text>
+                <Text style={S.statLbl}>jours streak</Text>
+              </View>
+              <View style={S.statDiv}/>
+              <View style={S.statBox}>
+                <Text style={S.statNum}>👥 {profile?.total_referrals||0}</Text>
+                <Text style={S.statLbl}>filleuls</Text>
+              </View>
+              <View style={S.statDiv}/>
+              <View style={S.statBox}>
+                <Text style={[S.statNum,{fontSize:12}]}>{profile?.wallet_address ? '✅' : '❌'}</Text>
+                <Text style={S.statLbl}>wallet BSC</Text>
+              </View>
+            </View>
+          </LinearGradient>
+
+          {/* Bouton Check-in */}
+          <TouchableOpacity style={[S.ciBtn, !checkinOk && S.ciBtnDone]} onPress={doCheckin} disabled={ciLoading}>
+            {ciLoading ? <ActivityIndicator color="#fff"/> : (
+              <>
+                <Ionicons name={checkinOk?'checkmark-circle-outline':'checkmark-circle'} size={28} color="#fff"/>
+                <View style={{flex:1}}>
+                  <Text style={S.ciTxt}>{checkinOk ? '🎯 Check-in quotidien (+100 B_MAK)' : '✓ Check-in effectué aujourd\'hui'}</Text>
+                  <Text style={S.ciSub}>{checkinOk
+                    ? `Appuyez pour gagner vos tokens (streak : ${profile?.checkin_streak||0} jours)`
+                    : 'Revenez demain pour continuer votre streak 🔥'}</Text>
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Bouton Réclamer (1500+ BMAK) */}
+          {profile?.wallet_address && Number(profile?.bmak_balance || 0) >= 1500 && (
+            <TouchableOpacity style={[S.reclaimBtn]} onPress={doReclaim} disabled={reclaimLoading}>
+              {reclaimLoading ? <ActivityIndicator color="#fff"/> : (
+                <>
+                  <Ionicons name="cash-outline" size={28} color="#fff"/>
+                  <View style={{flex:1}}>
+                    <Text style={S.reclaimTxt}>Réclamer mes B_MAK ({Number(profile?.bmak_balance||0).toLocaleString('fr-FR')} tokens)</Text>
+                    <Text style={S.reclaimSub}>Transfert automatique vers votre wallet BSC</Text>
+                  </View>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Jalons streak */}
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>Jalons de streak</Text>
+            {[{d:7,b:500,e:'⚡'},{d:14,b:1000,e:'🌟'},{d:30,b:3000,e:'👑'}].map(m => {
+              const streak = profile?.checkin_streak || 0;
+              const progress = streak >= m.d ? m.d : (streak % m.d);
+              const pct = Math.min((progress / m.d) * 100, 100);
+              const done = streak >= m.d;
+              return (
+                <View key={m.d} style={S.milestone}>
+                  <Text style={{fontSize:24}}>{m.e}</Text>
+                  <View style={{flex:1}}>
+                    <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:5}}>
+                      <Text style={S.mileName}>Jour {m.d}</Text>
+                      <Text style={S.mileBonus}>+{m.b.toLocaleString('fr-FR')} B_MAK</Text>
+                    </View>
+                    <View style={S.progressBg}>
+                      <View style={[S.progressFg, {width:`${pct}%`, backgroundColor: done ? '#4ade80' : '#a78bfa'}]}/>
+                    </View>
+                    <Text style={S.mileProgress}>{done ? '✅ Complété' : `${progress}/${m.d} jours`}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Transactions récentes */}
+          {transactions.length > 0 && (
+            <View style={S.section}>
+              <Text style={S.sectionTitle}>Activité récente</Text>
+              {transactions.slice(0,5).map((tx,i) => (
+                <View key={tx.id||i} style={S.txRow}>
+                  <View style={[S.txIcon,{backgroundColor:txColor(tx.type)+'22'}]}>
+                    <Ionicons name={txIcon(tx.type)} size={17} color={txColor(tx.type)}/>
+                  </View>
+                  <View style={{flex:1}}>
+                    <Text style={S.txDesc}>{tx.description||tx.type}</Text>
+                    <Text style={S.txDate}>{new Date(tx.created_at).toLocaleDateString('fr-FR')}</Text>
+                  </View>
+                  <Text style={[S.txAmt,{color:txColor(tx.type)}]}>+{Number(tx.amount).toLocaleString('fr-FR')}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ══ WALLET BSC ═══════════════════════════════════════════════════════ */}
+      {tab==='wallet' && (
+        <View style={S.content}>
+          <LinearGradient colors={['#1e3a1e','#0f2a0f']} style={S.walletCard}>
+            <Ionicons name="wallet-outline" size={44} color="#4ade80"/>
+            <Text style={S.walletTitle}>Wallet BSC</Text>
+            <Text style={S.walletSub}>Recevez vos B_MAK directement on-chain sur la BNB Smart Chain.</Text>
+          </LinearGradient>
+
+          {profile?.wallet_address && (
+            <View style={S.walletConnected}>
+              <Ionicons name="checkmark-circle" size={20} color="#4ade80"/>
+              <Text style={S.walletConnectedTxt} numberOfLines={1}>{profile.wallet_address}</Text>
+            </View>
+          )}
+
+          <Text style={S.walletLabel}>Adresse BSC (0x...)</Text>
+          <View style={S.inp}>
+            <Ionicons name="link-outline" size={18} color="#8b8bba" style={S.inpIcon}/>
+            <TextInput style={[S.inpField,{flex:1,fontFamily:Platform.OS==='ios'?'Courier':'monospace',fontSize:12}]}
+              value={wallet} onChangeText={setWallet} placeholder="0x..." placeholderTextColor="#4a4a7a"
+              autoCapitalize="none" autoCorrect={false}/>
+          </View>
+
+          <TouchableOpacity style={[S.submitBtn,{backgroundColor:'#16a34a'}]} onPress={saveWallet} disabled={savingWallet}>
+            {savingWallet ? <ActivityIndicator color="#fff"/> :
+              <Text style={S.submitTxt}>{profile?.wallet_address ? '🔄 Mettre à jour le wallet' : '🔗 Connecter ce wallet'}</Text>}
+          </TouchableOpacity>
+
+          <View style={S.walletInfo}>
+            <Text style={S.walletInfoTitle}>Comment ça fonctionne ?</Text>
+            {[
+              '1. Connectez votre wallet BSC ci-dessus',
+              '2. Accumulez des B_MAK via le check-in quotidien',
+              '3. L\'équipe B_MAK transfère vos tokens on-chain chaque semaine',
+              '4. Vérifiez votre solde BSC sur BscScan',
+            ].map((txt, i) => <Text key={i} style={S.walletInfoTxt}>{txt}</Text>)}
+            {wallet?.match(/^0x[a-fA-F0-9]{40}$/) && (
+              <TouchableOpacity style={S.bscscanBtn}
+                onPress={() => Linking.openURL(`https://bscscan.com/address/${wallet}`)}>
+                <Ionicons name="open-outline" size={14} color="#a78bfa"/>
+                <Text style={S.bscscanTxt}>Voir sur BscScan</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* ══ HISTORIQUE ═══════════════════════════════════════════════════════ */}
+      {tab==='history' && (
+        <View style={S.content}>
+          <Text style={S.sectionTitle}>Toutes les transactions</Text>
+          {transactions.length===0
+            ? <Text style={S.empty}>Aucune transaction pour l'instant.\nEffectuez votre premier check-in !</Text>
+            : transactions.map((tx,i) => (
+              <View key={tx.id||i} style={S.txRow}>
+                <View style={[S.txIcon,{backgroundColor:txColor(tx.type)+'22'}]}>
+                  <Ionicons name={txIcon(tx.type)} size={17} color={txColor(tx.type)}/>
+                </View>
+                <View style={{flex:1}}>
+                  <Text style={S.txDesc}>{tx.description||tx.type}</Text>
+                  <Text style={S.txDate}>{new Date(tx.created_at).toLocaleString('fr-FR')}</Text>
+                </View>
+                <Text style={[S.txAmt,{color:txColor(tx.type)}]}>+{Number(tx.amount).toLocaleString('fr-FR')}</Text>
+              </View>
+            ))
+          }
+        </View>
+      )}
+
+      {/* ══ PARRAINAGE ═══════════════════════════════════════════════════════ */}
+      {tab==='refer' && (
+        <View style={S.content}>
+          <LinearGradient colors={['#1e3a5f','#0f1a3a']} style={S.refCard}>
+            <Image source={bmakLogo} style={{width:60,height:60,marginBottom:8}} resizeMode="contain"/>
+            <Text style={S.refTitle}>Parrainage</Text>
+            <Text style={S.refSub}>+50 B_MAK par ami parrainé</Text>
+            <View style={S.refCodeBox}>
+              <Text style={S.refCode}>{profile?.referral_code || '——'}</Text>
+            </View>
+            <View style={S.refBtns}>
+              <TouchableOpacity style={S.refBtn} onPress={() => Alert.alert('Code copié !', profile?.referral_code)}>
+                <Ionicons name="copy-outline" size={15} color="#fff"/>
+                <Text style={S.refBtnTxt}>Copier</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[S.refBtn,{backgroundColor:'#3b82f6'}]} onPress={async () => {
+                await Share.share({ message: `Rejoins B_MAK et gagne des tokens ! 🚀\nCode de parrainage : ${profile?.referral_code}` });
+              }}>
+                <Ionicons name="share-social-outline" size={15} color="#fff"/>
+                <Text style={S.refBtnTxt}>Partager</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          <View style={S.refStats}>
+            <View style={S.refStatBox}>
+              <Text style={S.refStatNum}>{referrals.length || profile?.total_referrals || 0}</Text>
+              <Text style={S.refStatLbl}>Filleuls</Text>
+            </View>
+            <View style={S.refStatBox}>
+              <Text style={S.refStatNum}>{((referrals.length || profile?.total_referrals || 0) * 50).toLocaleString('fr-FR')}</Text>
+              <Text style={S.refStatLbl}>B_MAK gagnés</Text>
+            </View>
+          </View>
+
+          {referrals.length > 0 && (
+            <>
+              <Text style={[S.sectionTitle,{marginTop:16}]}>Mes filleuls</Text>
+              {referrals.map((r,i) => (
+                <View key={r.id||i} style={S.txRow}>
+                  <View style={[S.txIcon,{backgroundColor:'#60a5fa22'}]}>
+                    <Ionicons name="person-outline" size={17} color="#60a5fa"/>
+                  </View>
+                  <View style={{flex:1}}>
+                    <Text style={S.txDesc}>{r.display_name || 'Ami'}</Text>
+                    <Text style={S.txDate}>{new Date(r.created_at).toLocaleDateString('fr-FR')}</Text>
+                  </View>
+                  <Text style={[S.txAmt,{color:'#4ade80'}]}>+50</Text>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
+      )}
+
+      {/* ══ ADMIN ════════════════════════════════════════════════════════════ */}
+      {tab==='admin' && (
+        <View style={S.content}>
+          {/* Sous-onglets admin */}
+          <View style={S.adminTabs}>
+            {[{id:'stats',l:'Statistiques'},{id:'users',l:'Utilisateurs'},{id:'payout',l:'Paiements'},{id:'reclamations',l:'Réclamations'}].map(t => (
+              <TouchableOpacity key={t.id}
+                style={[S.adminTab, adminTab===t.id && S.adminTabActive]}
+                onPress={() => { 
+                  setAdminTab(t.id); 
+                  if(t.id==='users') loadAdminUsers(); 
+                  if(t.id==='stats') loadAdminStats(); 
+                  if(t.id==='reclamations') loadReclamations(); 
+                }}>
+                <Text style={[S.adminTabTxt, adminTab===t.id && S.adminTabTxtActive]}>{t.l}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Statistiques */}
+          {adminTab==='stats' && (
+            adminStats ? (
+              <View style={S.adminStatsGrid}>
+                {[
+                  {label:'Utilisateurs',val:adminStats.total,color:'#60a5fa'},
+                  {label:'Wallets BSC',val:adminStats.wallets,color:'#4ade80'},
+                  {label:'Payés',val:adminStats.paid,color:'#a78bfa'},
+                  {label:'En attente',val:adminStats.pending,color:'#fbbf24'},
+                  {label:'B_MAK à envoyer',val:Number(adminStats.bmakPending).toLocaleString('fr-FR'),color:'#f87171'},
+                ].map((s,i) => (
+                  <View key={i} style={[S.adminStatCard,{borderColor:s.color+'44'}]}>
+                    <Text style={[S.adminStatVal,{color:s.color}]}>{s.val}</Text>
+                    <Text style={S.adminStatLbl}>{s.label}</Text>
+                  </View>
+                ))}
+                <TouchableOpacity style={[S.refBtn,{alignSelf:'center',backgroundColor:'#1e293b'}]} onPress={loadAdminStats}>
+                  <Ionicons name="refresh" size={14} color="#a78bfa"/>
+                  <Text style={[S.refBtnTxt,{color:'#a78bfa'}]}>Actualiser</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={S.submitBtn} onPress={loadAdminStats}>
+                <Text style={S.submitTxt}>Charger les statistiques</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {/* Utilisateurs */}
+          {adminTab==='users' && (
+            <>
+              <View style={S.adminSearch}>
+                <Ionicons name="search-outline" size={16} color="#8b8bba" style={{marginRight:8}}/>
+                <TextInput style={S.adminSearchInp} placeholder="Rechercher..." placeholderTextColor="#4a4a7a"
+                  value={adminSearch} onChangeText={v => { setAdminSearch(v); loadAdminUsers(v); }}/>
+              </View>
+              {adminUsers.length === 0
+                ? <TouchableOpacity style={S.submitBtn} onPress={() => loadAdminUsers()}>
+                    <Text style={S.submitTxt}>Charger les utilisateurs</Text>
+                  </TouchableOpacity>
+                : adminUsers.map((u,i) => (
+                  <View key={u.id||i} style={S.adminUserCard}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:10,marginBottom:6}}>
+                      <View style={S.adminUserAvatar}>
+                        <Text style={S.adminUserInitial}>{(u.display_name||u.email||'?')[0].toUpperCase()}</Text>
+                      </View>
+                      <View style={{flex:1}}>
+                        <Text style={S.adminUserName}>{u.display_name||'—'}</Text>
+                        <Text style={S.adminUserEmail}>{u.email}</Text>
+                      </View>
+                      <View style={[S.adminStatusBadge,{backgroundColor:u.payout_sent?'#052e16':'#431407'}]}>
+                        <Text style={[S.adminStatusTxt,{color:u.payout_sent?'#4ade80':'#fb923c'}]}>
+                          {u.payout_sent?'Payé':'En attente'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={S.adminUserStats}>
+                      <Text style={S.adminUserStat}>💎 {Number(u.bmak_balance||0).toLocaleString('fr-FR')}</Text>
+                      <Text style={S.adminUserStat}>🔥 {u.checkin_streak||0} jours</Text>
+                      {u.wallet_address && <Text style={[S.adminUserStat,{color:'#4ade80'}]}>✅ Wallet</Text>}
+                      {isAdminEmail(u.email) && <Text style={[S.adminUserStat,{color:'#a78bfa'}]}>🛡 Admin</Text>}
+                    </View>
+                    {u.wallet_address && (
+                      <Text style={S.adminWallet} numberOfLines={1}>{u.wallet_address}</Text>
+                    )}
+                    <View style={{flexDirection:'row',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                      {!u.payout_sent
+                        ? <TouchableOpacity style={[S.adminBtn,{backgroundColor:'#052e16'}]} onPress={() => markPaid(u.id)}>
+                            <Ionicons name="checkmark-outline" size={14} color="#4ade80"/>
+                            <Text style={[S.adminBtnTxt,{color:'#4ade80'}]}>Marquer payé</Text>
+                          </TouchableOpacity>
+                        : <TouchableOpacity style={[S.adminBtn,{backgroundColor:'#431407'}]} onPress={() => markUnpaid(u.id)}>
+                            <Ionicons name="close-outline" size={14} color="#f87171"/>
+                            <Text style={[S.adminBtnTxt,{color:'#f87171'}]}>Annuler paiement</Text>
+                          </TouchableOpacity>
+                      }
+                    </View>
+                  </View>
+                ))
+              }
+            </>
+          )}
+
+          {/* Paiements on-chain */}
+          {adminTab==='payout' && (
+            <View style={S.adminPayoutInfo}>
+              <Ionicons name="rocket-outline" size={44} color="#a78bfa" style={{marginBottom:12}}/>
+              <Text style={S.adminPayoutTitle}>Paiement On-Chain BSC</Text>
+              <Text style={S.adminPayoutTxt}>
+                Les utilisateurs avec un wallet BSC connecté reçoivent leurs B_MAK on-chain.{'\n\n'}
+                Consultez la liste des utilisateurs en attente, vérifiez leurs wallets, puis marquez-les comme payés après le transfert.
+              </Text>
+              <TouchableOpacity style={[S.submitBtn,{backgroundColor:'#1e3a1e',marginTop:8}]}
+                onPress={() => { setAdminTab('users'); loadAdminUsers(); }}>
+                <Text style={[S.submitTxt,{color:'#4ade80'}]}>Voir utilisateurs en attente</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[S.submitBtn,{marginTop:8}]}
+                onPress={() => loadAdminStats()}>
+                <Text style={S.submitTxt}>Actualiser les stats</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Réclamations */}
+          {adminTab==='reclamations' && (
+            <View style={S.content}>
+              <Text style={S.sectionTitle}>Réclamations en attente</Text>
+              {reclamations.length === 0 
+                ? <Text style={S.empty}>Aucune réclamation en attente.</Text>
+                : reclamations.map((r) => (
+                  <View key={r.id} style={S.reclaimCard}>
+                    <View style={S.reclaimHeader}>
+                      <View style={S.reclaimUserInfo}>
+                        <Text style={S.reclaimUserName}>{r.users?.display_name || 'Utilisateur'}</Text>
+                        <Text style={S.reclaimUserEmail}>{r.users?.email}</Text>
+                      </View>
+                      <View style={[S.reclaimStatusBadge,{backgroundColor:'#431407'}]}>
+                        <Text style={[S.reclaimStatusTxt,{color:'#fb923c'}]}>
+                          {r.status}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={S.reclaimDetails}>
+                      <Text style={S.reclaimAmount}>Montant : {Number(r.amount).toLocaleString('fr-FR')} B_MAK</Text>
+                      <View style={S.reclaimWalletRow}>
+                        <Text style={S.reclaimWallet}>Wallet : {r.users?.wallet_address}</Text>
+                        <TouchableOpacity 
+                          style={S.copyBtn}
+                          onPress={() => {
+                            // Copier l'adresse dans le presse-papiers
+                            Clipboard.setStringAsync(r.users?.wallet_address);
+                            Alert.alert('Copié!', 'Adresse wallet copiée dans le presse-papiers');
+                          }}>
+                          <Ionicons name="copy-outline" size={16} color="#a78bfa" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={S.reclaimDate}>Demandée le : {new Date(r.created_at).toLocaleDateString('fr-FR')}</Text>
+                    </View>
+                    <View style={S.reclaimActions}>
+                      <TouchableOpacity 
+                        style={[S.adminBtn,{backgroundColor:'#052e16'}]} 
+                        onPress={() => processReclamation(r.id, r.user_id, r.amount, r.users?.wallet_address)}
+                        disabled={processingReclaim === r.id}>
+                        {processingReclaim === r.id ? (
+                          <ActivityIndicator color="#4ade80" size="small"/>
+                        ) : (
+                          <>
+                            <Ionicons name="send-outline" size={14} color="#4ade80"/>
+                            <Text style={[S.adminBtnTxt,{color:'#4ade80'}]}>Transférer B_MAK</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              }
+              <TouchableOpacity style={[S.submitBtn,{marginTop:16}]} onPress={loadReclamations}>
+                <Text style={S.submitTxt}>Actualiser les réclamations</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+// ─── Composant racine ─────────────────────────────────────────────────────────
+export default function BmakMining({ onBack }) {
+  const [bmakUser, setBmakUser]   = useState(null);
+  const [restoring, setRestoring] = useState(true);
+  const { bmakBalance, bmakStreak, restoreSession, clearSession, syncFromUser } = useBmakSession();
+
+  useEffect(() => {
+    (async () => {
+      const user = await restoreSession();
+      if (user) setBmakUser(user);
+      setRestoring(false);
+    })();
+  }, []);
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      // window.confirm fonctionne de manière fiable sur web
+      const ok = window.confirm('Voulez-vous vous déconnecter de B_MAK ?');
+      if (!ok) return;
+      await clearSession();
+      setBmakUser(null);
+    } else {
+      Alert.alert('Déconnexion B_MAK', 'Voulez-vous vous déconnecter ?', [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Déconnecter', style: 'destructive', onPress: async () => {
+          await clearSession();
+          setBmakUser(null);
+        }},
+      ]);
+    }
+  };
+
+  return (
+    <SafeAreaView style={S.safe}>
+      <StatusBar barStyle="light-content" backgroundColor="#0a0718"/>
+      <View style={S.header}>
+        {onBack && (
+          <TouchableOpacity style={S.backBtn} onPress={onBack}>
+            <Ionicons name="arrow-back" size={22} color="#a78bfa"/>
+          </TouchableOpacity>
+        )}
+        <Image source={bmakLogo} style={S.headerLogo} resizeMode="contain"/>
+        <Text style={S.headerTitle}>B_MAK Mining</Text>
+        <View style={{flex:1}}/>
+        {bmakUser && bmakBalance != null && (
+          <View style={S.hPill}>
+            <Text style={S.hPillTxt}>💎 {Number(bmakBalance).toLocaleString('fr-FR')}</Text>
+          </View>
+        )}
+        {bmakUser && bmakStreak > 0 && (
+          <View style={[S.hPill,{backgroundColor:'#431407'}]}>
+            <Text style={[S.hPillTxt,{color:'#fb923c'}]}>🔥 {bmakStreak}</Text>
+          </View>
+        )}
+      </View>
+
+      {!bmakConfigured ? (
+        <View style={S.center}>
+          <Image source={bmakLogo} style={{width:80,height:80,marginBottom:16}} resizeMode="contain"/>
+          <Ionicons name="cloud-offline-outline" size={40} color="#f87171" style={{marginBottom:8}}/>
+          <Text style={[S.restoringTxt,{color:'#f87171',fontSize:15,fontWeight:'700',textAlign:'center'}]}>
+            Configuration manquante
+          </Text>
+          <Text style={[S.restoringTxt,{textAlign:'center',paddingHorizontal:32,marginTop:8}]}>
+            Ajoutez ces 2 variables dans les Secrets Replit :{'\n\n'}
+            EXPO_PUBLIC_BMAK_SUPABASE_URL{'\n'}
+            EXPO_PUBLIC_BMAK_SUPABASE_ANON_KEY
+          </Text>
+        </View>
+      ) : restoring ? (
+        <View style={S.center}>
+          <Image source={bmakLogo} style={{width:90,height:90,marginBottom:18}} resizeMode="contain"/>
+          <ActivityIndicator color="#a78bfa" size="large"/>
+          <Text style={S.restoringTxt}>Chargement…</Text>
+        </View>
+      ) : bmakUser ? (
+        <Dashboard initUser={bmakUser} onLogout={handleLogout} syncFromUser={syncFromUser}/>
+      ) : (
+        <LoginScreen onSuccess={u => { setBmakUser(u); syncFromUser(u); }}/>
+      )}
+    </SafeAreaView>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const S = StyleSheet.create({
+  safe:        { flex:1, backgroundColor:'#0a0718' },
+  center:      { flex:1, justifyContent:'center', alignItems:'center', gap:14 },
+  restoringTxt:{ color:'#8b8bba', fontSize:13 },
+  header:      { flexDirection:'row', alignItems:'center', paddingHorizontal:14, paddingVertical:10, backgroundColor:'#0f0f2a', borderBottomWidth:1, borderBottomColor:'#1e1a3a', gap:8 },
+  backBtn:     { padding:6, backgroundColor:'#1a1440', borderRadius:10 },
+  headerLogo:  { width:30, height:30 },
+  headerTitle: { color:'#e2e8f0', fontSize:15, fontWeight:'800' },
+  hPill:       { backgroundColor:'#2d1b69', borderRadius:12, paddingHorizontal:9, paddingVertical:5 },
+  hPillTxt:    { color:'#c4b5fd', fontSize:11, fontWeight:'700' },
+
+  loginContainer: { padding:28, alignItems:'center', paddingTop:40 },
+  loginLogo:   { alignItems:'center', marginBottom:28 },
+  loginLogoImg:{ width:100, height:100, marginBottom:10 },
+  loginTitle:  { color:'#e2e8f0', fontSize:30, fontWeight:'900', letterSpacing:2 },
+  loginSub:    { color:'#6b7280', fontSize:12, marginTop:4, textAlign:'center' },
+  tabs:        { flexDirection:'row', backgroundColor:'#1a1440', borderRadius:14, padding:3, marginBottom:20, alignSelf:'stretch' },
+  tab:         { flex:1, paddingVertical:9, alignItems:'center', borderRadius:11 },
+  tabActive:   { backgroundColor:'#7c3aed' },
+  tabTxt:      { color:'#8b8bba', fontWeight:'600', fontSize:13 },
+  tabTxtActive:{ color:'#fff' },
+  form:        { width:'100%', gap:12 },
+  inp:         { flexDirection:'row', alignItems:'center', backgroundColor:'#1a1440', borderRadius:13, paddingHorizontal:13, paddingVertical:12, borderWidth:1, borderColor:'#2d1b69' },
+  inpIcon:     { marginRight:9 },
+  inpField:    { color:'#e2e8f0', fontSize:14, flex:1 },
+  errTxt:      { color:'#f87171', fontSize:12, textAlign:'center' },
+  submitBtn:   { backgroundColor:'#7c3aed', borderRadius:14, paddingVertical:15, alignItems:'center' },
+  submitTxt:   { color:'#fff', fontWeight:'800', fontSize:15 },
+
+  scroll:      { flex:1, backgroundColor:'#0a0718' },
+  dashHeader:  { flexDirection:'row', alignItems:'center', paddingHorizontal:16, paddingVertical:14, gap:12 },
+  dashLogo:    { width:44, height:44 },
+  dashName:    { color:'#e2e8f0', fontSize:17, fontWeight:'800' },
+  dashSub:     { color:'#8b8bba', fontSize:11 },
+  logoutBtn:   { padding:8, backgroundColor:'#2d1b1b', borderRadius:12 },
+
+  tabsScroll:      { backgroundColor:'#0f0f2a', borderBottomWidth:1, borderBottomColor:'#1e1a3a' },
+  tabItem:         { flexDirection:'row', alignItems:'center', gap:5, paddingVertical:11, paddingHorizontal:14 },
+  tabItemActive:   { borderBottomWidth:2, borderBottomColor:'#a78bfa' },
+  tabItemTxt:      { color:'#6b7280', fontSize:12, fontWeight:'600' },
+  tabItemTxtActive:{ color:'#a78bfa' },
+
+  content:      { padding:16, gap:14 },
+  sectionTitle: { color:'#c4b5fd', fontSize:14, fontWeight:'800', marginBottom:2 },
+  section:      { gap:10 },
+  empty:        { color:'#4a4a7a', textAlign:'center', marginVertical:24, fontSize:13, lineHeight:20 },
+
+  balanceCard:  { borderRadius:22, padding:22, alignItems:'center', gap:5, borderWidth:1, borderColor:'#a78bfa33' },
+  balanceLogo:  { width:54, height:54, marginBottom:2 },
+  balanceLabel: { color:'#8b8bba', fontSize:13 },
+  balanceValue: { color:'#fff', fontSize:38, fontWeight:'900', letterSpacing:1 },
+  balanceSub:   { color:'#6b6b9a', fontSize:12 },
+  statsRow:     { flexDirection:'row', alignItems:'center', marginTop:8, gap:20 },
+  statBox:      { alignItems:'center' },
+  statNum:      { color:'#e2e8f0', fontSize:16, fontWeight:'800' },
+  statLbl:      { color:'#8b8bba', fontSize:10, marginTop:2 },
+  statDiv:      { width:1, height:34, backgroundColor:'#2d1b69' },
+
+  ciBtn:        { flexDirection:'row', alignItems:'center', gap:12, backgroundColor:'#7c3aed', borderRadius:18, padding:17, elevation:4 },
+  ciBtnDone:    { backgroundColor:'#1e3a1e' },
+  ciTxt:        { color:'#fff', fontWeight:'800', fontSize:14 },
+  ciSub:        { color:'#c4b5fd', fontSize:11, marginTop:2 },
+
+  reclaimBtn:   { flexDirection:'row', alignItems:'center', gap:12, backgroundColor:'#059669', borderRadius:18, padding:17, elevation:4 },
+  reclaimTxt:   { color:'#fff', fontWeight:'800', fontSize:14 },
+  reclaimSub:   { color:'#86efac', fontSize:11, marginTop:2 },
+
+  milestone:    { flexDirection:'row', alignItems:'center', gap:12, backgroundColor:'#0f0f2a', borderRadius:13, padding:13 },
+  mileName:     { color:'#c4b5fd', fontWeight:'700', fontSize:13 },
+  mileBonus:    { color:'#fbbf24', fontWeight:'700', fontSize:12 },
+  progressBg:   { height:5, backgroundColor:'#1e1a3a', borderRadius:3, marginBottom:3 },
+  progressFg:   { height:5, borderRadius:3 },
+  mileProgress: { color:'#6b7280', fontSize:10 },
+
+  txRow:        { flexDirection:'row', alignItems:'center', gap:10, backgroundColor:'#0f0f2a', borderRadius:13, padding:11 },
+  txIcon:       { width:36, height:36, borderRadius:18, justifyContent:'center', alignItems:'center' },
+  txDesc:       { color:'#e2e8f0', fontSize:13, fontWeight:'600' },
+  txDate:       { color:'#6b7280', fontSize:10, marginTop:1 },
+  txAmt:        { fontWeight:'800', fontSize:13 },
+
+  walletCard:         { borderRadius:20, padding:22, alignItems:'center', gap:8 },
+  walletTitle:        { color:'#fff', fontSize:20, fontWeight:'900' },
+  walletSub:          { color:'#4ade80', fontSize:13, textAlign:'center' },
+  walletConnected:    { flexDirection:'row', alignItems:'center', gap:8, backgroundColor:'#052e16', borderRadius:12, padding:12 },
+  walletConnectedTxt: { color:'#4ade80', fontSize:11, flex:1, fontFamily:Platform.OS==='ios'?'Courier':'monospace' },
+  walletLabel:        { color:'#8b8bba', fontSize:13, fontWeight:'600' },
+  walletInfo:         { backgroundColor:'#0f0f2a', borderRadius:16, padding:16, gap:7 },
+  walletInfoTitle:    { color:'#a78bfa', fontWeight:'800', fontSize:14, marginBottom:2 },
+  walletInfoTxt:      { color:'#8b8bba', fontSize:12 },
+  bscscanBtn:         { flexDirection:'row', alignItems:'center', gap:6, marginTop:4 },
+  bscscanTxt:         { color:'#a78bfa', fontSize:12, textDecorationLine:'underline' },
+
+  refCard:     { borderRadius:22, padding:22, alignItems:'center', gap:8 },
+  refTitle:    { color:'#fff', fontSize:20, fontWeight:'900' },
+  refSub:      { color:'#a78bfa', fontSize:13 },
+  refCodeBox:  { backgroundColor:'#0f0f2a', borderRadius:12, paddingHorizontal:20, paddingVertical:9, marginTop:4 },
+  refCode:     { color:'#fbbf24', fontSize:24, fontWeight:'900', letterSpacing:3 },
+  refBtns:     { flexDirection:'row', gap:10, marginTop:6 },
+  refBtn:      { flexDirection:'row', alignItems:'center', gap:5, backgroundColor:'#7c3aed', borderRadius:11, paddingHorizontal:16, paddingVertical:9 },
+  refBtnTxt:   { color:'#fff', fontWeight:'700', fontSize:13 },
+  refStats:    { flexDirection:'row', gap:14 },
+  refStatBox:  { flex:1, backgroundColor:'#0f0f2a', borderRadius:15, padding:14, alignItems:'center' },
+  refStatNum:  { color:'#c4b5fd', fontSize:28, fontWeight:'900' },
+  refStatLbl:  { color:'#6b7280', fontSize:11, marginTop:3 },
+
+  adminTabs:       { flexDirection:'row', backgroundColor:'#0f0f2a', borderRadius:14, padding:3, marginBottom:14 },
+  adminTab:        { flex:1, paddingVertical:8, alignItems:'center', borderRadius:10 },
+  adminTabActive:  { backgroundColor:'#1e1a3a' },
+  adminTabTxt:     { color:'#6b7280', fontSize:12, fontWeight:'600' },
+  adminTabTxtActive:{ color:'#a78bfa' },
+  adminStatsGrid:  { flexDirection:'row', flexWrap:'wrap', gap:10 },
+  adminStatCard:   { backgroundColor:'#0f0f2a', borderRadius:14, padding:14, width:'47%', borderWidth:1 },
+  adminStatVal:    { fontSize:24, fontWeight:'900', marginBottom:3 },
+  adminStatLbl:    { color:'#8b8bba', fontSize:11 },
+  adminSearch:     { flexDirection:'row', alignItems:'center', backgroundColor:'#1a1440', borderRadius:12, paddingHorizontal:12, paddingVertical:10, marginBottom:12, borderWidth:1, borderColor:'#2d1b69' },
+  adminSearchInp:  { flex:1, color:'#e2e8f0', fontSize:14 },
+  adminUserCard:   { backgroundColor:'#0f0f2a', borderRadius:14, padding:13, marginBottom:10 },
+  adminUserAvatar: { width:38, height:38, borderRadius:19, backgroundColor:'#2d1b69', justifyContent:'center', alignItems:'center' },
+  adminUserInitial:{ color:'#c4b5fd', fontWeight:'800', fontSize:17 },
+  adminUserName:   { color:'#e2e8f0', fontWeight:'700', fontSize:14 },
+  adminUserEmail:  { color:'#6b7280', fontSize:11 },
+  adminStatusBadge:{ borderRadius:8, paddingHorizontal:7, paddingVertical:3 },
+  adminStatusTxt:  { fontSize:10, fontWeight:'700' },
+  adminUserStats:  { flexDirection:'row', gap:12, marginBottom:4, flexWrap:'wrap' },
+  adminUserStat:   { color:'#8b8bba', fontSize:11 },
+  adminWallet:     { color:'#4ade80', fontSize:10, fontFamily:Platform.OS==='ios'?'Courier':'monospace', marginBottom:2 },
+  adminBtn:        { flexDirection:'row', alignItems:'center', gap:5, borderRadius:10, paddingHorizontal:12, paddingVertical:7 },
+  adminBtnTxt:     { fontSize:12, fontWeight:'700' },
+  adminPayoutInfo: { alignItems:'center', gap:10, paddingTop:10 },
+  adminPayoutTitle:{ color:'#e2e8f0', fontSize:18, fontWeight:'800' },
+  adminPayoutTxt:  { color:'#8b8bba', fontSize:13, textAlign:'center', lineHeight:20 },
+
+  // Réclamations
+  reclaimCard:      { backgroundColor:'#0f0f2a', borderRadius:16, padding:16, gap:10, marginBottom:12 },
+  reclaimHeader:    { flexDirection:'row', justifyContent:'space-between', alignItems:'center' },
+  reclaimUserInfo:   { flex:1 },
+  reclaimWalletRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  copyBtn:          { padding: 4, backgroundColor:'#1e1a3a', borderRadius: 4, marginLeft: 8 },
+  reclaimUserName:   { color:'#e2e8f0', fontSize:14, fontWeight:'800' },
+  reclaimUserEmail:  { color:'#6b7280', fontSize:11, marginTop:2 },
+  reclaimStatusBadge:{ borderRadius:8, paddingHorizontal:7, paddingVertical:3 },
+  reclaimStatusTxt:  { fontSize:10, fontWeight:'700' },
+  reclaimDetails:    { gap:4 },
+  reclaimAmount:     { color:'#fbbf24', fontSize:13, fontWeight:'600' },
+  reclaimWallet:     { color:'#4ade80', fontSize:11, fontFamily:Platform.OS==='ios'?'Courier':'monospace' },
+  reclaimDate:       { color:'#6b7280', fontSize:10 },
+  reclaimActions:    { flexDirection:'row', justifyContent:'flex-end', marginTop:4 },
+
+  // Notifications
+  notificationBtn:  { padding:8, backgroundColor:'#1a1440', borderRadius:12, marginRight:8, position:'relative' },
+  notificationBadge:{ position:'absolute', top:-2, right:-2, backgroundColor:'#f87171', borderRadius:10, minWidth:18, height:18, justifyContent:'center', alignItems:'center' },
+  notificationBadgeTxt:{ color:'#fff', fontSize:10, fontWeight:'800' },
+});

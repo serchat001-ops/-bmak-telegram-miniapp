@@ -304,3 +304,16 @@ body {
 .reclaim-btn { background:rgba(0,0,0,0.25); color:#fff; border:1px solid rgba(255,255,255,0.3); padding:10px 16px; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; white-space:nowrap; }
 .reclaim-btn:hover:not(:disabled) { background:rgba(0,0,0,0.4); }
 .reclaim-btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+/* ── B_MAK Logo images ── */
+.splash-icon-img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; box-shadow: 0 8px 30px rgba(245,158,11,0.35); margin-bottom: 8px; }
+.wl-icon-img { width: 76px; height: 76px; border-radius: 50%; object-fit: cover; margin-bottom: 6px; box-shadow: 0 6px 22px rgba(245,158,11,0.3); }
+.logo-chain-img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+
+/* ── Admin: logo images & reclamations ── */
+.login-logo-img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; margin-bottom: 6px; box-shadow: 0 8px 24px rgba(245,158,11,0.3); }
+.sidebar-logo-img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
+.reclam-badge { background:#ef4444; color:#fff; font-size:11px; font-weight:800; padding:2px 7px; border-radius:10px; margin-left:6px; }
+.reclam-badge.hidden { display:none; }
+.btn-danger { background:#ef4444; color:#fff; border:none; }
+.btn-danger:hover:not(:disabled) { background:#dc2626; }

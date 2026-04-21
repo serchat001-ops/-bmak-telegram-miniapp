@@ -19,7 +19,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       const data = await apiFetch('/api/users/web-session', 'POST', { webUid: saved });
       if (data.user) {
         const cfg = await apiFetch('/api/config').catch(() => ({}));
-        if (data.user.email === cfg.adminEmail) {
+        const allowed = (cfg.adminEmails || (cfg.adminEmail ? [cfg.adminEmail] : [])).map(e => e.toLowerCase());
+        if (data.user.email && allowed.includes(data.user.email.toLowerCase())) {
           adminState.webUid = saved;
           adminState.user = data.user;
           enterAdminApp();
@@ -56,7 +57,8 @@ async function adminLogin() {
     if (!data.user) throw new Error('Aucun utilisateur retourné');
 
     const cfg = await apiFetch('/api/config');
-    if (data.user.email !== cfg.adminEmail) {
+    const allowed = (cfg.adminEmails || (cfg.adminEmail ? [cfg.adminEmail] : [])).map(e => e.toLowerCase());
+    if (!data.user.email || !allowed.includes(data.user.email.toLowerCase())) {
       err.textContent = 'Accès refusé — compte non administrateur';
       err.classList.remove('hidden');
       btn.disabled = false;
@@ -91,6 +93,19 @@ function enterAdminApp() {
   document.getElementById('admin-app').style.display = 'block';
   document.getElementById('sidebar-email').textContent = adminState.user.email;
   loadDashboard();
+  loadReclamations();
+  if (window._reclamPoll) clearInterval(window._reclamPoll);
+  window._reclamPoll = setInterval(loadReclamations, 30000);
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const diff = Date.now() - d.getTime();
+  if (diff < 60000) return 'à l\'instant';
+  if (diff < 3600000) return `il y a ${Math.floor(diff/60000)}m`;
+  if (diff < 86400000) return `il y a ${Math.floor(diff/3600000)}h`;
+  return d.toLocaleDateString('fr-FR');
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
@@ -105,6 +120,73 @@ function showPage(name) {
   else if (name === 'users') loadUsers();
   else if (name === 'transactions') loadTransactions();
   else if (name === 'payouts') loadPayouts();
+  else if (name === 'reclamations') loadReclamations();
+}
+
+// ─── Reclamations ─────────────────────────────────────────────────────────────
+async function loadReclamations() {
+  const tb = document.getElementById('reclam-tbody');
+  if (tb) tb.innerHTML = '<tr><td colspan="7" class="loading">Chargement...</td></tr>';
+  try {
+    const data = await adminFetch('/api/reclamations/admin/pending');
+    const list = data.reclamations || [];
+    const badge = document.getElementById('reclam-badge');
+    const count = document.getElementById('reclam-count');
+    if (badge) {
+      badge.textContent = list.length;
+      badge.classList.toggle('hidden', list.length === 0);
+    }
+    if (count) count.textContent = `Réclamations en attente (${list.length})`;
+    if (list.length === 0) {
+      tb.innerHTML = '<tr><td colspan="7" class="loading">Aucune réclamation en attente 🎉</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map(r => {
+      const u = r.users || {};
+      const wallet = r.wallet_address || u.wallet_address || '';
+      const wShort = wallet ? `${wallet.slice(0,6)}...${wallet.slice(-4)}` : '—';
+      return `<tr>
+        <td>#${r.id}</td>
+        <td>${u.display_name || '—'}</td>
+        <td>${u.email || '—'}</td>
+        <td><strong>${Number(r.amount).toLocaleString('fr-FR')}</strong></td>
+        <td><a href="https://bscscan.com/address/${wallet}" target="_blank" title="${wallet}">${wShort}</a></td>
+        <td>${formatDate(r.created_at)}</td>
+        <td>
+          <button class="btn btn-sm btn-green" onclick="processReclaim(${r.id})">✅ Traiter</button>
+          <button class="btn btn-sm btn-danger" onclick="openReject(${r.id}, '${(u.display_name || '').replace(/'/g,"\\'")}')">✖ Refuser</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="7" class="loading">Erreur : ${e.message}</td></tr>`;
+  }
+}
+
+async function processReclaim(id) {
+  if (!confirm('Confirmer le traitement de cette réclamation ?\nLe solde de l\'utilisateur sera mis à 0 et marqué comme payé.')) return;
+  try {
+    await adminFetch(`/api/reclamations/${id}/process`, 'PATCH');
+    await loadReclamations();
+  } catch (e) { alert('Erreur : ' + e.message); }
+}
+
+let _rejectId = null;
+function openReject(id, name) {
+  _rejectId = id;
+  document.getElementById('reject-modal-user').textContent = name || '';
+  document.getElementById('reject-reason').value = '';
+  document.getElementById('reject-modal').classList.remove('hidden');
+}
+async function submitReject() {
+  if (!_rejectId) return;
+  const reason = document.getElementById('reject-reason').value.trim();
+  try {
+    await adminFetch(`/api/reclamations/${_rejectId}/reject`, 'PATCH', { reason });
+    closeModal('reject-modal');
+    _rejectId = null;
+    await loadReclamations();
+  } catch (e) { alert('Erreur : ' + e.message); }
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────

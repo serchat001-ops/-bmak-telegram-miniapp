@@ -148,7 +148,7 @@
 <!-- Login -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">⛓</div>
+    <img src="/bmak-logo.png" alt="B_MAK" class="login-logo-img" />
     <div class="login-title">B_MAK ADMIN</div>
     <div class="login-sub">Panneau d'administration</div>
     <input type="email" id="admin-email-input" class="login-input" placeholder="Email administrateur" autocomplete="email" />
@@ -162,7 +162,7 @@
 <div id="admin-app">
   <aside class="admin-sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-icon">⛓</div>
+      <img src="/bmak-logo.png" alt="B_MAK" class="sidebar-logo-img" />
       <div class="sidebar-logo-text">B_MAK</div>
       <div class="sidebar-logo-sub">Administration</div>
     </div>
@@ -178,6 +178,9 @@
       </div>
       <div class="nav-item" onclick="showPage('payouts')" data-page="payouts">
         <span class="nav-icon">💰</span> Paiements
+      </div>
+      <div class="nav-item" onclick="showPage('reclamations')" data-page="reclamations">
+        <span class="nav-icon">📨</span> Réclamations <span id="reclam-badge" class="reclam-badge hidden">0</span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -287,7 +290,47 @@
         </div>
       </div>
     </div>
+    <!-- Reclamations -->
+    <div class="page" id="page-reclamations">
+      <div class="page-title">📨 Réclamations en attente</div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title" id="reclam-count">Réclamations</span>
+          <button class="btn btn-sm" onclick="loadReclamations()">🔄 Actualiser</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Montant B_MAK</th>
+                <th>Wallet BSC</th>
+                <th>Demandé</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reclam-tbody"><tr><td colspan="7" class="loading">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </main>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay hidden" id="reject-modal">
+  <div class="modal">
+    <div class="modal-title">Refuser la réclamation</div>
+    <div class="modal-sub" id="reject-modal-user"></div>
+    <label class="modal-label">Raison (optionnel, envoyée à l'utilisateur)</label>
+    <input type="text" id="reject-reason" class="modal-input" placeholder="ex: Wallet invalide..." />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('reject-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="submitReject()">Refuser</button>
+    </div>
+  </div>
 </div>
 
 <!-- Balance Modal -->
