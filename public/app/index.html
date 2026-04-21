@@ -98,8 +98,27 @@
           <div class="pm-type" id="pm-type"></div>
         </div>
         <button class="pm-btn admin hidden" id="pm-admin-btn" onclick="goToAdmin()">🛡 Panneau Admin</button>
+        <button class="pm-btn" id="pm-change-pwd-btn" onclick="openChangePassword()">🔐 Changer le mot de passe</button>
         <button class="pm-btn danger" onclick="logoutWeb()">🚪 Log out</button>
         <button class="pm-btn" onclick="closeProfileMenu()">Cancel</button>
+      </div>
+
+      <!-- Change Password Modal -->
+      <div id="change-password-modal" class="modal-overlay hidden">
+        <div class="modal-sheet">
+          <div class="modal-handle"></div>
+          <div class="modal-title">🔐 Changer le mot de passe</div>
+          <div class="modal-note">Saisissez votre mot de passe actuel (ou temporaire fourni par l'admin) puis votre nouveau mot de passe.</div>
+          <label class="modal-label">Mot de passe actuel</label>
+          <input type="password" id="old-pwd" class="modal-input" placeholder="Mot de passe actuel" autocomplete="current-password" />
+          <label class="modal-label">Nouveau mot de passe (min 6 caractères)</label>
+          <input type="password" id="new-pwd" class="modal-input" placeholder="Nouveau mot de passe" autocomplete="new-password" />
+          <label class="modal-label">Confirmer le nouveau mot de passe</label>
+          <input type="password" id="new-pwd2" class="modal-input" placeholder="Confirmer" autocomplete="new-password" />
+          <div id="change-pwd-error" class="modal-error hidden"></div>
+          <button class="modal-btn primary" onclick="submitChangePassword()">Enregistrer</button>
+          <button class="modal-btn secondary" onclick="closeModal('change-password-modal')">Annuler</button>
+        </div>
       </div>
 
       <!-- Home Tab -->

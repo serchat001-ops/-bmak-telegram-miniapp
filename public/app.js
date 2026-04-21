@@ -748,6 +748,39 @@ function showProfileMenu() {
   el('profile-menu').classList.toggle('hidden');
 }
 function closeProfileMenu() { el('profile-menu').classList.add('hidden'); }
+
+// ─── Change Password ──────────────────────────────────────────────────────────
+function openChangePassword() {
+  closeProfileMenu();
+  ['old-pwd','new-pwd','new-pwd2'].forEach(id => { const n = el(id); if (n) n.value = ''; });
+  el('change-pwd-error')?.classList.add('hidden');
+  el('change-password-modal')?.classList.remove('hidden');
+}
+
+async function submitChangePassword() {
+  const oldPwd = el('old-pwd').value;
+  const newPwd = el('new-pwd').value;
+  const newPwd2 = el('new-pwd2').value;
+  const errEl = el('change-pwd-error');
+  const showErr = (m) => { errEl.textContent = m; errEl.classList.remove('hidden'); };
+  errEl.classList.add('hidden');
+
+  if (!oldPwd || !newPwd || !newPwd2) return showErr('Tous les champs sont requis');
+  if (newPwd.length < 6) return showErr('Le nouveau mot de passe doit contenir au moins 6 caractères');
+  if (newPwd !== newPwd2) return showErr('Les deux nouveaux mots de passe ne correspondent pas');
+  if (oldPwd === newPwd) return showErr('Le nouveau mot de passe doit être différent de l\'ancien');
+  if (!state.user?.id) return showErr('Session invalide, reconnectez-vous');
+
+  try {
+    await apiFetch('/api/users/change-password', 'POST', {
+      userId: state.user.id, oldPassword: oldPwd, newPassword: newPwd,
+    });
+    closeModal('change-password-modal');
+    showToast('✅ Mot de passe modifié avec succès', 'green');
+  } catch (e) {
+    showErr(e.message || 'Erreur lors du changement');
+  }
+}
 function goToAdmin() {
   closeProfileMenu();
   window.location.href = '/admin/';

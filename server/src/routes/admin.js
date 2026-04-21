@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { supabase } = require('../db');
+
+function generateTempPassword() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let pwd = 'BMAK';
+  for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  return pwd;
+}
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ||
   process.env.ADMIN_EMAIL ||
@@ -192,6 +200,35 @@ router.get('/transactions', requireAdmin, async (req, res) => {
 
     if (error) throw error;
     res.json({ transactions: data, total: count });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ─── Reset User Password (admin generates temp password) ──────────────────────
+router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
+  try {
+    const { data: user } = await supabase.from('users').select('id, email, display_name').eq('id', req.params.id).maybeSingle();
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    await supabase.from('users').update({
+      password_hash: passwordHash,
+      failed_login_attempts: 0,
+      login_locked_until: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', user.id);
+
+    await supabase.from('notifications').insert({
+      user_id: user.id,
+      type: 'password_reset',
+      title: '🔐 Mot de passe réinitialisé',
+      message: 'Votre mot de passe a été réinitialisé par un administrateur. Connectez-vous puis changez-le immédiatement dans votre profil.',
+    });
+
+    res.json({ success: true, tempPassword, user: { id: user.id, email: user.email, name: user.display_name } });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }

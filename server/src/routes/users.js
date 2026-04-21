@@ -234,4 +234,30 @@ router.post('/wallet', async (req, res) => {
   }
 });
 
+// ─── Change Password (user, with old password verification) ───────────────────
+router.post('/change-password', async (req, res) => {
+  const { userId, oldPassword, newPassword } = req.body;
+  if (!userId || !oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Champs requis manquants' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' });
+  }
+  try {
+    const { data: user } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    if (!user || !user.password_hash) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const valid = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Ancien mot de passe incorrect' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('users')
+      .update({ password_hash: newHash, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

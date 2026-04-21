@@ -266,6 +266,7 @@ async function loadUsers(page = 1) {
           <div class="flex-gap">
             <button class="btn btn-sm btn-primary" onclick="viewUser(${u.id})">Voir</button>
             <button class="btn btn-sm btn-yellow" onclick="openBalance(${u.id},'${esc(u.display_name || u.email)}')">Solde</button>
+            ${u.auth_type === 'email' ? `<button class="btn btn-sm btn-purple" onclick="resetPassword(${u.id},'${esc(u.display_name || u.email)}')">🔐 Reset MDP</button>` : ''}
             <button class="btn btn-sm btn-red" onclick="deleteUser(${u.id},'${esc(u.display_name || u.email)}')">Suppr.</button>
           </div>
         </td>
@@ -315,6 +316,7 @@ async function viewUser(id) {
       <div class="flex-gap section-gap">
         <button class="btn btn-yellow" onclick="openBalance(${u.id},'${esc(u.display_name || u.email)}')">💱 Ajuster solde</button>
         ${!u.payout_sent && parseFloat(u.bmak_balance) > 0 ? `<button class="btn btn-green" onclick="openPayout(${u.id},'${esc(u.display_name || u.email)}',${u.bmak_balance})">💰 Marquer payé</button>` : ''}
+        ${u.auth_type === 'email' ? `<button class="btn btn-purple" onclick="resetPassword(${u.id},'${esc(u.display_name || u.email)}')">🔐 Reset mot de passe</button>` : ''}
         <button class="btn btn-red" onclick="deleteUser(${u.id},'${esc(u.display_name || u.email)}')">🗑 Supprimer</button>
       </div>
       <div class="table-card">
@@ -471,6 +473,21 @@ async function submitPayout() {
   }
 }
 
+// ─── Reset User Password ──────────────────────────────────────────────────────
+async function resetPassword(id, name) {
+  if (!confirm(`Réinitialiser le mot de passe de "${name}" ?\n\nUn mot de passe temporaire sera généré. Vous devrez le communiquer à l'utilisateur.`)) return;
+  try {
+    const res = await adminFetch(`/api/admin/users/${id}/reset-password`, 'POST');
+    const tmp = res.tempPassword;
+    const msg = `🔐 Mot de passe temporaire généré pour ${name}\n\n${tmp}\n\n⚠️ Communiquez-le à l'utilisateur.\nIl devra le changer immédiatement après connexion.\n\nCliquez sur OK pour le copier dans le presse-papiers.`;
+    if (confirm(msg)) {
+      try { await navigator.clipboard.writeText(tmp); alert('✅ Copié !'); } catch { /* noop */ }
+    }
+  } catch (e) {
+    alert(`Erreur: ${e.message}`);
+  }
+}
+
 // ─── Delete User ──────────────────────────────────────────────────────────────
 async function deleteUser(id, name) {
   if (!confirm(`⚠️ Supprimer définitivement l'utilisateur "${name}" (ID: ${id}) ?\n\nCette action est irréversible.`)) return;
@@ -556,6 +573,7 @@ window.submitBalance = submitBalance;
 window.openPayout = openPayout;
 window.submitPayout = submitPayout;
 window.deleteUser = deleteUser;
+window.resetPassword = resetPassword;
 window.closeModal = closeModal;
 window.searchUsers = searchUsers;
 window.usersPage = usersPage;
