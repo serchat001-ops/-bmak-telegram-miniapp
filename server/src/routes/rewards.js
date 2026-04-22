@@ -114,7 +114,7 @@ router.get('/referrals/:userId', async (req, res) => {
       bonus_paid: r.bonus_paid,
     }));
 
-    const botUsername = process.env.BOT_USERNAME || 'B_MAK_officiel_bot';
+    const botUsername = process.env.BOT_USERNAME || 'B_MAK_Clean_Bot';
     const domain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN || '';
     const webLink = domain ? `https://${domain}/app?ref=${user.referral_code}` : '';
     const tgLink = `https://t.me/${botUsername}?start=${user.referral_code}`;

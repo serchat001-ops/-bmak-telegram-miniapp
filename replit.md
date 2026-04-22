@@ -91,7 +91,7 @@ vite.config.ts     - Vite dev server (serves public/, proxies /api → 3001)
 
 ## Telegram Mini App
 
-- Bot username: `B_MAK_officiel_bot`
+- Bot username: `B_MAK_Clean_Bot`
 - Bot token stored in secret `TELEGRAM_BOT_TOKEN`
 - `/start` opens the mini app via inline `webApp` button pointing to `REPLIT_DEV_DOMAIN` (or `MINI_APP_URL` if set)
 - Supabase credentials read from `EXPO_PUBLIC_BMAK_SUPABASE_URL` / `EXPO_PUBLIC_BMAK_SUPABASE_ANON_KEY` (fallback `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`)
