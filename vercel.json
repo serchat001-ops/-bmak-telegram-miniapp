@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "vite build",
+  "buildCommand": "vite build && cp public/app.js public/admin.js dist/",
   "outputDirectory": "dist",
   "functions": {
     "api/index.js": {
