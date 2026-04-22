@@ -50,6 +50,30 @@
           <button class="wl-btn" id="wl-login-btn" onclick="submitLogin()">
             🔐 Se connecter
           </button>
+          <div style="text-align:center;margin-top:10px;">
+            <a href="#" onclick="event.preventDefault();showForgotPassword();" style="color:#8b5cf6;font-size:13px;text-decoration:none;">Mot de passe oublié ?</a>
+          </div>
+        </div>
+
+        <!-- Forgot Password Form -->
+        <div id="wl-forgot-form" class="hidden">
+          <div class="wl-desc">Entrez votre email pour recevoir un lien de réinitialisation</div>
+          <input type="email" id="wl-forgot-email" class="wl-input" placeholder="Adresse email" autocomplete="email" />
+          <div class="wl-error hidden" id="wl-forgot-error"></div>
+          <div class="wl-success hidden" id="wl-forgot-success" style="color:#10b981;font-size:13px;text-align:center;margin:8px 0;"></div>
+          <button class="wl-btn" id="wl-forgot-btn" onclick="submitForgotPassword()">📧 Envoyer le lien</button>
+          <div style="text-align:center;margin-top:10px;">
+            <a href="#" onclick="event.preventDefault();switchAuthTab('login');" style="color:#8b5cf6;font-size:13px;text-decoration:none;">← Retour à la connexion</a>
+          </div>
+        </div>
+
+        <!-- Reset Password Form (shown when ?reset=TOKEN in URL) -->
+        <div id="wl-reset-form" class="hidden">
+          <div class="wl-desc">Choisissez votre nouveau mot de passe</div>
+          <input type="password" id="wl-reset-password" class="wl-input" placeholder="Nouveau mot de passe (min. 6 caractères)" autocomplete="new-password" />
+          <input type="password" id="wl-reset-password2" class="wl-input" placeholder="Confirmer le mot de passe" autocomplete="new-password" />
+          <div class="wl-error hidden" id="wl-reset-error"></div>
+          <button class="wl-btn" id="wl-reset-btn" onclick="submitResetPassword()">🔐 Réinitialiser</button>
         </div>
 
         <!-- Register Form -->

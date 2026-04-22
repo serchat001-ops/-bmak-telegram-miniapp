@@ -93,33 +93,124 @@ function showWebLogin() {
   setTimeout(() => {
     if (splash) splash.classList.add('hidden');
     if (overlay) overlay.classList.remove('hidden');
-    const refCode = new URLSearchParams(window.location.search).get('ref') || '';
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref') || '';
+    const resetToken = params.get('reset') || '';
     const inp = document.getElementById('wl-name-input');
     if (inp && refCode) inp.dataset.ref = refCode;
-    // Focus on login email by default
-    const loginInp = document.getElementById('wl-login-email');
-    if (loginInp) loginInp.focus();
+    if (resetToken) {
+      showResetPassword();
+    } else {
+      const loginInp = document.getElementById('wl-login-email');
+      if (loginInp) loginInp.focus();
+    }
   }, delay);
 }
 
 function switchAuthTab(tab) {
   const loginForm = document.getElementById('wl-login-form');
   const registerForm = document.getElementById('wl-register-form');
+  const forgotForm = document.getElementById('wl-forgot-form');
+  const resetForm = document.getElementById('wl-reset-form');
   const loginBtn = document.getElementById('tab-login-btn');
   const registerBtn = document.getElementById('tab-register-btn');
+  const tabsBar = document.querySelector('.wl-tabs');
+
+  forgotForm?.classList.add('hidden');
+  resetForm?.classList.add('hidden');
+  if (tabsBar) tabsBar.style.display = '';
 
   if (tab === 'login') {
     loginForm.classList.remove('hidden');
     registerForm.classList.add('hidden');
     loginBtn.classList.add('active');
     registerBtn.classList.remove('active');
-    document.getElementById('wl-login-email').focus();
+    document.getElementById('wl-login-email')?.focus();
   } else {
     loginForm.classList.add('hidden');
     registerForm.classList.remove('hidden');
     loginBtn.classList.remove('active');
     registerBtn.classList.add('active');
-    document.getElementById('wl-register-email').focus();
+    document.getElementById('wl-register-email')?.focus();
+  }
+}
+
+function showForgotPassword() {
+  document.getElementById('wl-login-form').classList.add('hidden');
+  document.getElementById('wl-register-form').classList.add('hidden');
+  document.getElementById('wl-reset-form').classList.add('hidden');
+  document.getElementById('wl-forgot-form').classList.remove('hidden');
+  const tabsBar = document.querySelector('.wl-tabs');
+  if (tabsBar) tabsBar.style.display = 'none';
+  document.getElementById('wl-forgot-email')?.focus();
+}
+
+function showResetPassword() {
+  document.getElementById('wl-login-form').classList.add('hidden');
+  document.getElementById('wl-register-form').classList.add('hidden');
+  document.getElementById('wl-forgot-form').classList.add('hidden');
+  document.getElementById('wl-reset-form').classList.remove('hidden');
+  const tabsBar = document.querySelector('.wl-tabs');
+  if (tabsBar) tabsBar.style.display = 'none';
+  document.getElementById('wl-reset-password')?.focus();
+}
+
+async function submitForgotPassword() {
+  const emailInput = document.getElementById('wl-forgot-email');
+  const btn = document.getElementById('wl-forgot-btn');
+  const errEl = document.getElementById('wl-forgot-error');
+  const okEl = document.getElementById('wl-forgot-success');
+  const email = emailInput.value.trim();
+  errEl.classList.add('hidden');
+  okEl.classList.add('hidden');
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Veuillez entrer une adresse email valide';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Envoi...';
+  try {
+    const data = await apiFetch('/api/users/forgot-password', 'POST', { email });
+    okEl.textContent = data.message || '📧 Email envoyé ! Vérifiez votre boîte de réception (et les spams).';
+    okEl.classList.remove('hidden');
+    btn.textContent = '✅ Envoyé';
+  } catch (e) {
+    errEl.textContent = e?.data?.error || 'Erreur lors de l\'envoi';
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = '📧 Envoyer le lien';
+  }
+}
+
+async function submitResetPassword() {
+  const p1 = document.getElementById('wl-reset-password').value;
+  const p2 = document.getElementById('wl-reset-password2').value;
+  const btn = document.getElementById('wl-reset-btn');
+  const errEl = document.getElementById('wl-reset-error');
+  const token = new URLSearchParams(window.location.search).get('reset') || '';
+  errEl.classList.add('hidden');
+  if (p1.length < 6) {
+    errEl.textContent = 'Le mot de passe doit contenir au moins 6 caractères';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (p1 !== p2) {
+    errEl.textContent = 'Les mots de passe ne correspondent pas';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Mise à jour...';
+  try {
+    await apiFetch('/api/users/reset-password', 'POST', { token, newPassword: p1 });
+    alert('✅ Mot de passe réinitialisé ! Vous pouvez vous connecter.');
+    window.location.href = '/app/';
+  } catch (e) {
+    errEl.textContent = e?.data?.error || 'Erreur lors de la réinitialisation';
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = '🔐 Réinitialiser';
   }
 }
 

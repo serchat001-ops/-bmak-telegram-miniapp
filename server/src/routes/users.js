@@ -3,7 +3,39 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { supabase } = require('../db');
 const { validateTelegramWebAppData, generateReferralCode } = require('../telegram');
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes } = require('crypto');
+const { sendMail } = require('../email');
+
+const REFERRAL_BONUS = parseInt(process.env.REFERRAL_BONUS || '50', 10);
+
+async function rewardReferrer(referrerDbId, newUserDbId) {
+  const { data: refUser } = await supabase
+    .from('users')
+    .select('id, telegram_id, bmak_balance, total_earned, total_referrals')
+    .eq('id', referrerDbId)
+    .maybeSingle();
+  if (!refUser) return;
+  await supabase.from('users').update({
+    bmak_balance: Number(refUser.bmak_balance || 0) + REFERRAL_BONUS,
+    total_earned: Number(refUser.total_earned || 0) + REFERRAL_BONUS,
+    total_referrals: Number(refUser.total_referrals || 0) + 1,
+    updated_at: new Date().toISOString(),
+  }).eq('id', refUser.id);
+  await supabase.from('transactions').insert({
+    user_db_id: refUser.id,
+    telegram_id: refUser.telegram_id || null,
+    type: 'referral',
+    amount: REFERRAL_BONUS,
+    description: 'Referral bonus - new user joined',
+  });
+  await supabase.from('notifications').insert({
+    user_id: refUser.id,
+    type: 'referral',
+    title: 'Nouveau filleul !',
+    message: `+${REFERRAL_BONUS} B_MAK ajoutés à votre solde`,
+    read: false,
+  });
+}
 
 // ─── Telegram Auth ────────────────────────────────────────────────────────────
 router.post('/auth', async (req, res) => {
@@ -133,7 +165,9 @@ router.post('/web-register', async (req, res) => {
       await supabase.from('referrals').insert({
         referrer_db_id: referredByDbId,
         referred_db_id: user.id,
+        bonus_paid: true,
       });
+      await rewardReferrer(referredByDbId, user.id);
     }
 
     res.json({ success: true, user, webUid });
@@ -256,6 +290,93 @@ router.post('/change-password', async (req, res) => {
       .eq('id', userId);
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ─── Forgot Password (request reset link) ─────────────────────────────────────
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Adresse email invalide' });
+  }
+  const safeEmail = email.trim().toLowerCase();
+  try {
+    const { data: user } = await supabase
+      .from('users').select('id, email, display_name, first_name')
+      .eq('email', safeEmail).maybeSingle();
+
+    // Always respond success to avoid email enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'Si ce compte existe, un email a été envoyé.' });
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+
+    await supabase.from('users').update({
+      password_reset_token: token,
+      password_reset_expires: expires,
+    }).eq('id', user.id);
+
+    const base = process.env.MINI_APP_URL || `https://${req.get('host')}`;
+    const resetUrl = `${base}/app/?reset=${token}`;
+    const name = user.display_name || user.first_name || 'utilisateur';
+
+    try {
+      await sendMail({
+        to: safeEmail,
+        subject: 'B_MAK — Réinitialisation de votre mot de passe',
+        text: `Bonjour ${name},\n\nVous avez demandé à réinitialiser votre mot de passe B_MAK.\n\nCliquez sur ce lien (valide 1 heure) :\n${resetUrl}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\nL'équipe B_MAK`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#0d0d1a;color:#fff;border-radius:12px;">
+            <h2 style="background:linear-gradient(135deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;background-clip:text;color:transparent;">B_MAK</h2>
+            <p>Bonjour <b>${name}</b>,</p>
+            <p>Vous avez demandé à réinitialiser votre mot de passe B_MAK.</p>
+            <p style="text-align:center;margin:30px 0;">
+              <a href="${resetUrl}" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;padding:14px 28px;text-decoration:none;border-radius:10px;font-weight:bold;">🔐 Réinitialiser mon mot de passe</a>
+            </p>
+            <p style="font-size:12px;color:#aaa;">Ce lien est valide pendant 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+            <hr style="border-color:#333;margin:20px 0;" />
+            <p style="font-size:11px;color:#666;">L'équipe B_MAK — bmak.finance</p>
+          </div>`,
+      });
+    } catch (mailErr) {
+      console.error('[Forgot Password] Email send failed:', mailErr.message);
+    }
+
+    res.json({ success: true, message: 'Si ce compte existe, un email a été envoyé.' });
+  } catch (err) {
+    console.error('[Forgot Password] Error:', err.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ─── Reset Password (verify token + set new) ──────────────────────────────────
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'Lien invalide' });
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+  }
+  try {
+    const { data: user } = await supabase
+      .from('users').select('id, password_reset_expires')
+      .eq('password_reset_token', token).maybeSingle();
+    if (!user) return res.status(400).json({ error: 'Lien invalide ou expiré' });
+    if (user.password_reset_expires && new Date(user.password_reset_expires) < new Date()) {
+      return res.status(400).json({ error: 'Lien expiré, demandez-en un nouveau' });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('users').update({
+      password_hash: passwordHash,
+      password_reset_token: null,
+      password_reset_expires: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', user.id);
+    res.json({ success: true, message: 'Mot de passe réinitialisé. Vous pouvez vous connecter.' });
+  } catch (err) {
+    console.error('[Reset Password] Error:', err.message);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
