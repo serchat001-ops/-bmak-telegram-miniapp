@@ -103,7 +103,7 @@ router.post('/auth', async (req, res) => {
 
 // ─── Web Register ─────────────────────────────────────────────────────────────
 router.post('/web-register', async (req, res) => {
-  const { displayName, email, password, referralCode } = req.body;
+  const { displayName, email, password, referralCode, acceptedTerms } = req.body;
 
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Adresse email invalide' });
@@ -113,6 +113,9 @@ router.post('/web-register', async (req, res) => {
   }
   if (!password || password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+  }
+  if (!acceptedTerms) {
+    return res.status(400).json({ error: 'Vous devez accepter les Conditions Générales d\'Utilisation' });
   }
 
   const safeName = displayName.trim().slice(0, 32);

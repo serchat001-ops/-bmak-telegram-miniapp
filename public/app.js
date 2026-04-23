@@ -294,6 +294,12 @@ async function submitWebLogin() {
     errEl.classList.remove('hidden');
     return;
   }
+  const cguChecked = document.getElementById('wl-accept-cgu')?.checked;
+  if (!cguChecked) {
+    errEl.textContent = 'Vous devez accepter les Conditions Générales d\'Utilisation';
+    errEl.classList.remove('hidden');
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = '⏳ Création du compte...';
@@ -306,6 +312,7 @@ async function submitWebLogin() {
       displayName: name,
       password,
       referralCode: refCode,
+      acceptedTerms: true,
     });
     if (data.user && data.webUid) {
       localStorage.setItem('bmak_web_uid', data.webUid);

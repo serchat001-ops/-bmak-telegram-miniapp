@@ -13,6 +13,8 @@
     { "source": "/app", "destination": "/app/index.html" },
     { "source": "/app/", "destination": "/app/index.html" },
     { "source": "/admin", "destination": "/admin/index.html" },
-    { "source": "/admin/", "destination": "/admin/index.html" }
+    { "source": "/admin/", "destination": "/admin/index.html" },
+    { "source": "/cgu", "destination": "/cgu/index.html" },
+    { "source": "/cgu/", "destination": "/cgu/index.html" }
   ]
 }

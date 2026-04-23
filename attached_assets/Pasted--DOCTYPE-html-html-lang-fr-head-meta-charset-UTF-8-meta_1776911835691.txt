@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGU – B_MAK | Terms of Use</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0c29;
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            backdrop-filter: blur(5px);
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem 0;
+            color: #c084fc;
+            border-left: 4px solid #8b5cf6;
+            padding-left: 1rem;
+        }
+        h3 {
+            font-size: 1.2rem;
+            margin: 1rem 0 0.5rem 0;
+            color: #a78bfa;
+        }
+        p, li {
+            margin-bottom: 0.75rem;
+            color: #cbd5e1;
+        }
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .lang-section {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .lang-badge {
+            display: inline-block;
+            background: #8b5cf6;
+            color: white;
+            padding: 0.2rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        a {
+            color: #8b5cf6;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(139,92,246,0.3);
+            font-weight: bold;
+        }
+        code {
+            background: rgba(0,0,0,0.5);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .alert-box {
+            background: rgba(239,68,68,0.15);
+            border: 1px solid #ef4444;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            color: #fecaca;
+        }
+        .alert-box strong {
+            color: #f87171;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📜 B_MAK – Conditions Générales d'Utilisation</h1>
+        <p style="margin-bottom: 1rem;"><strong>Version 1.0 – 23 avril 2026</strong> | Éditeur : Benjamin Makoma | <a href="https://bmak.finance">bmak.finance</a></p>
+
+        <!-- RAPPEL IMPORTANT (visible en haut) -->
+        <div class="alert-box">
+            <strong>⚠️ RAPPEL IMPORTANT</strong><br>
+            • B_MAK est un service <strong>100% GRATUIT</strong><br>
+            • Aucune valeur marchande garantie<br>
+            • Projet en développement par une seule personne
+        </div>
+
+        <!-- SECTION FRANÇAIS -->
+        <div class="lang-section">
+            <div class="lang-badge">🇫🇷 FRANÇAIS</div>
+
+            <h2>ARTICLE 1 – PRÉAMBULE ET DÉFINITIONS</h2>
+            <h3>1.1 Objet</h3>
+            <p>Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation du service de distribution gratuite (faucet) du token <strong>B_MAK</strong> sur la blockchain <strong>BNB Smart Chain (BSC)</strong>, accessible via le site web <code>bmak.finance</code>, l'application web associée, et la future application mobile.</p>
+
+            <h3>1.2 Définitions</h3>
+            <ul>
+                <li><strong>"Faucet"</strong> : Système de distribution gratuite de tokens B_MAK sans contrepartie financière.</li>
+                <li><strong>"Utilisateur"</strong> : Toute personne physique accédant au service, s'inscrivant ou utilisant l'application.</li>
+                <li><strong>"Mineur"</strong> : Utilisateur effectuant le check-in quotidien pour recevoir des B_MAK.</li>
+                <li><strong>"Token B_MAK"</strong> : Actif numérique natif de la blockchain BNB Smart Chain (BEP-20), dont l'adresse du contrat est : <br><code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code></li>
+                <li><strong>"Wallet"</strong> : Portefeuille crypto compatible BSC (MetaMask, Trust Wallet, Binance Wallet, etc.).</li>
+                <li><strong>"Parrainage"</strong> : Système de récompense permettant à un Utilisateur de gagner des B_MAK en invitant d'autres personnes.</li>
+            </ul>
+
+            <h2>ARTICLE 2 – ACCEPTATION DES CGU</h2>
+            <p>2.1 L'utilisation du service B_MAK implique l'acceptation pleine et entière des présentes CGU. Tout Utilisateur qui n'accepte pas ces conditions doit cesser immédiatement d'utiliser le service.</p>
+            <p>2.2 En utilisant B_MAK, l'Utilisateur confirme :</p>
+            <ul>
+                <li>Être <strong>majeur</strong> selon la législation de son pays de résidence.</li>
+                <li>Comprendre les <strong>risques liés aux crypto-actifs</strong> (volatilité, perte totale, etc.).</li>
+                <li>Ne pas avoir été incité à investir de l'argent dans B_MAK, le service étant <strong>gratuit</strong>.</li>
+                <li>Fournir des informations <strong>exactes, complètes et à jour</strong> lors de son inscription.</li>
+            </ul>
+
+            <h2>ARTICLE 3 – DESCRIPTION DU SERVICE</h2>
+            <h3>3.1 Nature du service</h3>
+            <p>B_MAK est un <strong>faucet gratuit</strong> sans aucune obligation financière. Le service permet actuellement de :</p>
+            <ul>
+                <li>Réclamer des tokens B_MAK gratuitement via un <strong>check-in quotidien</strong> (100 B_MAK par jour).</li>
+                <li>Gagner des <strong>bonus de série</strong> (500, 1000, 3000 B_MAK pour 7, 14 et 30 jours consécutifs).</li>
+                <li>Parrainer d'autres Utilisateurs et recevoir <strong>50 B_MAK par filleul</strong>.</li>
+                <li>Consulter son solde, son historique et ses récompenses.</li>
+            </ul>
+
+            <h3>3.2 Ce que B_MAK N'EST PAS</h3>
+            <table>
+                <tr><th>B_MAK n'est PAS</th><th>Explication</th></tr>
+                <tr><td>Un investissement</td><td>Aucun rendement financier garanti</td></tr>
+                <tr><td>Un titre financier</td><td>Pas de participation aux bénéfices</td></tr>
+                <tr><td>Une promesse de gain</td><td>La valeur future du token est incertaine</td></tr>
+                <tr><td>Une institution financière</td><td>Non régulée comme une banque</td></tr>
+            </table>
+
+            <h3>3.3 Avertissement sur la valeur</h3>
+            <p>⚠️ <strong>Les tokens B_MAK distribués gratuitement n'ont aucune valeur marchande garantie à ce jour.</strong> Leur utilité future dépend du développement de l'écosystème B_MAK (e-commerce, partenariats, etc.). L'Utilisateur reconnaît que ces tokens peuvent perdre toute valeur ou devenir inutilisables.</p>
+
+            <h2>ARTICLE 4 – ACCÈS AU SERVICE</h2>
+            <h3>4.1 Prérequis techniques</h3>
+            <ul>
+                <li>Posséder un <strong>wallet compatible BSC</strong> (MetaMask, Trust Wallet, Binance Wallet, etc.).</li>
+                <li>Disposer d'une <strong>adresse email valide</strong>.</li>
+                <li>Avoir une <strong>connexion internet</strong> stable.</li>
+            </ul>
+
+            <h3>4.2 Limitations et usage raisonnable</h3>
+            <ul>
+                <li><strong>Un seul compte par personne physique</strong> est autorisé.</li>
+                <li>Le check-in quotidien est limité à <strong>une fois par période de 24 heures</strong>.</li>
+                <li>L'éditeur se réserve le droit de <strong>suspendre ou supprimer</strong> tout compte en cas de fraude, création de comptes multiples depuis une même IP, ou non-respect des CGU.</li>
+            </ul>
+
+            <h2>ARTICLE 5 – PROPRIÉTÉ INTELLECTUELLE</h2>
+            <p>L'ensemble des éléments du site et de l'application (textes, logos, nom "B_MAK", code source, design) sont la propriété exclusive de <strong>Benjamin Makoma</strong>. Toute reproduction sans autorisation écrite est interdite.</p>
+            <p>Le smart contract du token B_MAK est public et vérifiable sur BscScan. L'Utilisateur reconnaît que l'éditeur ne peut modifier le contrat après son déploiement.</p>
+
+            <h2>ARTICLE 6 – DONNÉES PERSONNELLES</h2>
+            <h3>6.1 Collecte</h3>
+            <p>Les données collectées sont limitées à : email, adresse de wallet BSC, historique de minage, adresse IP (pour prévention de la fraude).</p>
+            <h3>6.2 Finalité</h3>
+            <p>Gestion du compte, distribution des récompenses, communication sur le projet, prévention de la fraude.</p>
+            <h3>6.3 Droits de l'Utilisateur</h3>
+            <p>Conformément aux principes de protection des données personnelles, l'Utilisateur peut demander l'accès, la rectification ou la suppression de ses données à : <strong>ben.makoma98@gmail.com</strong></p>
+
+            <h2>ARTICLE 7 – RESPONSABILITÉ</h2>
+            <p>L'éditeur s'engage à maintenir le service accessible dans la mesure du possible, mais ne peut être tenu responsable en cas de :</p>
+            <ul>
+                <li>Perte de valeur du token B_MAK</li>
+                <li>Bugs ou vulnérabilités du smart contract (absence d'audit formel)</li>
+                <li>Problèmes réseau de BNB Chain</li>
+                <li>Vol de wallet utilisateur (sécurité de la clé privée = responsabilité utilisateur)</li>
+                <li>Arrêt ou abandon du projet (projet en développement)</li>
+                <li>Force majeure (guerre, pandémie, changement législatif, etc.)</li>
+            </ul>
+
+            <h2>ARTICLE 8 – RISQUES SPÉCIFIQUES AUX CRYPTO-ACTIFS</h2>
+            <p>L'Utilisateur reconnaît que les crypto-actifs sont volatils, que la réglementation peut évoluer, et qu'il n'y a aucune garantie de convertibilité en monnaie fiat.</p>
+            <p><strong>Spécificité RDC :</strong> La réglementation congolaise sur les crypto-actifs est en développement. Tout changement législatif peut affecter le service.</p>
+
+            <h2>ARTICLE 9 – MODIFICATION DES CGU</h2>
+            <p>L'éditeur peut modifier les CGU à tout moment. Les Utilisateurs seront informés par email ou notification. L'utilisation continue du service vaut acceptation.</p>
+
+            <h2>ARTICLE 10 – RÈGLEMENT DES LITIGES</h2>
+            <p>Les présentes CGU sont soumises au droit de la <strong>République Démocratique du Congo</strong>. En cas de litige, les tribunaux de <strong>Bukavu, Sud-Kivu</strong> sont compétents.</p>
+
+            <h2>ARTICLE 11 – CONTACT</h2>
+            <p><strong>Benjamin Makoma</strong><br>📧 ben.makoma98@gmail.com<br>🌐 <a href="https://bmak.finance">bmak.finance</a><br>📍 Bukavu, Sud-Kivu, RDC</p>
+        </div>
+
+        <!-- SECTION ENGLISH -->
+        <div class="lang-section">
+            <div class="lang-badge">🇬🇧 ENGLISH – Terms of Use</div>
+
+            <h2>ARTICLE 1 – PREAMBLE AND DEFINITIONS</h2>
+            <h3>1.1 Purpose</h3>
+            <p>These Terms of Use govern access to and use of the B_MAK token free distribution service (faucet) on the <strong>BNB Smart Chain (BSC)</strong>, accessible via <code>bmak.finance</code>, the web app, and the future mobile app.</p>
+
+            <h3>1.2 Definitions</h3>
+            <ul>
+                <li><strong>"Faucet"</strong>: Free token distribution system with no financial consideration.</li>
+                <li><strong>"User"</strong>: Any person accessing the service.</li>
+                <li><strong>"Miner"</strong>: User performing the daily check-in to receive B_MAK.</li>
+                <li><strong>"B_MAK Token"</strong>: BEP-20 digital asset on BNB Smart Chain. Contract address: <code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code></li>
+                <li><strong>"Wallet"</strong>: BSC-compatible crypto wallet (MetaMask, Trust Wallet, Binance Wallet, etc.).</li>
+                <li><strong>"Referral"</strong>: Reward system allowing a User to earn B_MAK by inviting others.</li>
+            </ul>
+
+            <h2>ARTICLE 2 – ACCEPTANCE OF TERMS</h2>
+            <p>Using B_MAK constitutes full acceptance of these Terms. By using the service, the User confirms they are of legal age, understand the risks of crypto-assets, and provide accurate information.</p>
+
+            <h2>ARTICLE 3 – SERVICE DESCRIPTION</h2>
+            <p>B_MAK is a <strong>free faucet</strong> allowing Users to:</p>
+            <ul>
+                <li>Claim 100 B_MAK daily via check-in</li>
+                <li>Earn streak bonuses (500, 1000, 3000 B_MAK)</li>
+                <li>Earn 50 B_MAK per referral</li>
+                <li>View balance and history</li>
+            </ul>
+            <p><strong>⚠️ B_MAK is NOT an investment, a financial security, or a guaranteed profit scheme.</strong> The tokens have no guaranteed market value.</p>
+
+            <h2>ARTICLE 4 – ACCESS TO THE SERVICE</h2>
+            <ul>
+                <li>One account per person.</li>
+                <li>Daily check-in limited to once every 24 hours.</li>
+                <li>The editor may suspend accounts in case of fraud or multiple accounts from the same IP.</li>
+            </ul>
+
+            <h2>ARTICLE 5 – INTELLECTUAL PROPERTY</h2>
+            <p>All content on the site and app (text, logos, "B_MAK" name, code) is the exclusive property of <strong>Benjamin Makoma</strong>. The smart contract is public and verifiable on BscScan.</p>
+
+            <h2>ARTICLE 6 – PERSONAL DATA</h2>
+            <p>Collected data: email, BSC wallet address, mining history, IP address (for fraud prevention). Users may request access, rectification, or deletion of their data via <strong>ben.makoma98@gmail.com</strong>.</p>
+
+            <h2>ARTICLE 7 – LIMITATION OF LIABILITY</h2>
+            <p>The editor is not liable for:</p>
+            <ul>
+                <li>Loss of token value</li>
+                <li>Smart contract bugs or vulnerabilities</li>
+                <li>BNB Chain network issues</li>
+                <li>Wallet theft (user's private key responsibility)</li>
+                <li>Project abandonment or force majeure</li>
+            </ul>
+
+            <h2>ARTICLE 8 – CRYPTO-ASSET RISKS</h2>
+            <p>Users acknowledge that crypto-assets are volatile, regulations may change, and there is no guarantee of convertibility to fiat currency.</p>
+            <p><strong>DRC specific:</strong> Congolese crypto regulations are developing. Legal changes may affect the service.</p>
+
+            <h2>ARTICLE 9 – TERMS MODIFICATION</h2>
+            <p>The editor may modify these Terms at any time. Users will be notified by email or in-app notification. Continued use constitutes acceptance.</p>
+
+            <h2>ARTICLE 10 – DISPUTE RESOLUTION</h2>
+            <p>These Terms are governed by the laws of the <strong>Democratic Republic of Congo</strong>. Disputes fall under the jurisdiction of <strong>Bukavu, South Kivu</strong>.</p>
+
+            <h2>ARTICLE 11 – CONTACT</h2>
+            <p><strong>Benjamin Makoma</strong><br>📧 ben.makoma98@gmail.com<br>🌐 <a href="https://bmak.finance">bmak.finance</a><br>📍 Bukavu, South Kivu, DRC</p>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 B_MAK – Tous droits réservés | All rights reserved</p>
+            <p>Version 1.0 – 23 avril 2026 | <a href="https://bmak.finance">Retour à l'accueil</a></p>
+        </div>
+    </div>
+</body>
+</html>

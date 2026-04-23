@@ -83,6 +83,10 @@
           <input type="text" id="wl-name-input" class="wl-input" placeholder="Nom d'affichage (ex: CryptoKing)" maxlength="32" autocomplete="username" />
           <input type="password" id="wl-register-password" class="wl-input" placeholder="Mot de passe (min. 6 caractères)" autocomplete="new-password" />
           <input type="password" id="wl-register-password2" class="wl-input" placeholder="Confirmer le mot de passe" autocomplete="new-password" />
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#cbd5e1;margin:10px 0;cursor:pointer;">
+            <input type="checkbox" id="wl-accept-cgu" style="margin-top:3px;flex-shrink:0;" />
+            <span>J'ai lu et j'accepte les <a href="/cgu" target="_blank" style="color:#8b5cf6;text-decoration:underline;">Conditions Générales d'Utilisation (CGU)</a></span>
+          </label>
           <div class="wl-error hidden" id="wl-error"></div>
           <button class="wl-btn" id="wl-submit-btn" onclick="submitWebLogin()">
             🚀 Créer mon compte
@@ -90,7 +94,8 @@
         </div>
 
         <div class="wl-footer">
-          <a href="https://t.me/" target="_blank" class="wl-tg-link">📱 Utiliser Telegram Mini App</a>
+          <a href="https://t.me/B_MAK_Clean_Bot" target="_blank" class="wl-tg-link">📱 Utiliser Telegram Mini App</a>
+          <div style="margin-top:8px;"><a href="/cgu" target="_blank" style="color:#8b5cf6;font-size:12px;text-decoration:none;">📜 CGU</a></div>
         </div>
       </div>
     </div>
