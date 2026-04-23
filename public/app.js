@@ -820,23 +820,33 @@ function copyRefCode() {
   if (code) { navigator.clipboard.writeText(code).catch(() => {}); showToast('Referral code copied! 📋'); }
 }
 
-function shareRef() {
+function shareRef() { shareTgRef(); }
+
+function shareTgRef() {
   const data = state.refData;
   if (!data) return;
-
+  const link = data.referralLink;
+  const text = `🌟 Rejoignez B_MAK sur Telegram et gagnez des BMAK chaque jour !\n\n${link}`;
   if (state.mode === 'telegram' && window.Telegram?.WebApp) {
-    const link = data.referralLink;
-    const text = `🌟 Join B_MAK Mini App and earn BMAK tokens every day!\n\nUse my link:\n${link}`;
     window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  } else if (navigator.share) {
+    navigator.share({ title: 'B_MAK Telegram', text, url: link }).catch(() => {});
   } else {
-    const link = data.webReferralLink || data.referralLink;
-    const text = `🌟 Join B_MAK and earn BMAK tokens daily!\n\n${link}`;
-    if (navigator.share) {
-      navigator.share({ title: 'B_MAK Blockchain Rewards', text, url: link }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(link).catch(() => {});
-      showToast('Referral link copied! 🔗');
-    }
+    navigator.clipboard.writeText(link).catch(() => {});
+    showToast('Lien Telegram copié ! 📱');
+  }
+}
+
+function shareWebRef() {
+  const data = state.refData;
+  if (!data) return;
+  const link = data.webReferralLink || data.referralLink;
+  const text = `🌟 Rejoignez B_MAK sur le web et gagnez des BMAK chaque jour !\n\n${link}`;
+  if (navigator.share) {
+    navigator.share({ title: 'B_MAK Web', text, url: link }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(link).catch(() => {});
+    showToast('Lien Web copié ! 🌐');
   }
 }
 

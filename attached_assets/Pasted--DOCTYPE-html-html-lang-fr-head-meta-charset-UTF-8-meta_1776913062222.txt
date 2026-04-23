@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whitepaper – B_MAK | Free Daily Rewards Token</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0c29;
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            backdrop-filter: blur(5px);
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem 0;
+            color: #c084fc;
+            border-left: 4px solid #8b5cf6;
+            padding-left: 1rem;
+        }
+        h3 {
+            font-size: 1.2rem;
+            margin: 1rem 0 0.5rem 0;
+            color: #a78bfa;
+        }
+        p, li {
+            margin-bottom: 0.75rem;
+            color: #cbd5e1;
+        }
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .lang-section {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .lang-badge {
+            display: inline-block;
+            background: #8b5cf6;
+            color: white;
+            padding: 0.2rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        a {
+            color: #8b5cf6;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(139,92,246,0.3);
+            font-weight: bold;
+        }
+        code {
+            background: rgba(0,0,0,0.5);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .alert-box {
+            background: rgba(239,68,68,0.15);
+            border: 1px solid #ef4444;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            color: #fecaca;
+        }
+        .alert-box strong {
+            color: #f87171;
+        }
+        .badge {
+            display: inline-block;
+            background: #8b5cf6;
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 B_MAK – Whitepaper</h1>
+        <p><strong>Version 1.0 – 23 avril 2026</strong> | Benjamin Makoma | <a href="https://bmak.finance">bmak.finance</a></p>
+
+        <!-- AVERTISSEMENT -->
+        <div class="alert-box">
+            <strong>⚠️ AVERTISSEMENT IMPORTANT</strong><br>
+            • B_MAK est un service <strong>100% GRATUIT</strong><br>
+            • Aucune valeur marchande garantie<br>
+            • Projet en développement par une seule personne<br>
+            • Ne constitue pas un conseil en investissement
+        </div>
+
+        <!-- ==================== FRANÇAIS ==================== -->
+        <div class="lang-section">
+            <div class="lang-badge">🇫🇷 FRANÇAIS – Livre Blanc</div>
+
+            <h2>1. RÉSUMÉ EXÉCUTIF</h2>
+            <p>B_MAK est un token BEP-20 sur la blockchain BNB Smart Chain (BSC), distribué gratuitement via un système de <strong>check-in quotidien</strong>. Les utilisateurs gagnent 100 B_MAK par jour, avec des bonus de série (7, 14, 30 jours) et un système de parrainage (50 B_MAK par filleul).</p>
+            <p>L'objectif à long terme est de construire un <strong>écosystème e-commerce</strong> où B_MAK servira de moyen de paiement, tout en maintenant une communauté transparente et engagée.</p>
+
+            <h2>2. PROBLÈME & SOLUTION</h2>
+            <h3>Problème</h3>
+            <ul>
+                <li>Peu de projets vraiment gratuits et sans risque</li>
+                <li>Manque de transparence des faucets traditionnels</li>
+                <li>Tokens gratuits souvent sans utilité réelle</li>
+            </ul>
+            <h3>Solution B_MAK</h3>
+            <ul>
+                <li><strong>100% gratuit</strong> : aucun achat requis</li>
+                <li><strong>Transparence totale</strong> : contrat public, code ouvert, CGU claires</li>
+                <li><strong>Utilité future</strong> : e-commerce, staking, partenariats</li>
+                <li><strong>Communauté active</strong> : Telegram, bot, site web</li>
+            </ul>
+
+            <h2>3. TECHNOLOGIE & BLOCKCHAIN</h2>
+            <ul>
+                <li><strong>Réseau</strong> : BNB Smart Chain (BSC) – frais bas, rapide, fiable</li>
+                <li><strong>Type de token</strong> : BEP-20</li>
+                <li><strong>Adresse du contrat</strong> : <code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code></li>
+                <li><strong>Wallets compatibles</strong> : MetaMask, Trust Wallet, Binance Wallet, SafePal, etc.</li>
+                <li><strong>Explorateur</strong> : <a href="https://bscscan.com/token/0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D" target="_blank">BscScan</a></li>
+            </ul>
+
+            <h2>4. TOKENOMICS (Répartition des 500M B_MAK)</h2>
+            <table>
+                <tr><th>Catégorie</th><th>%</th><th>Quantité</th><th>Explication</th></tr>
+                <tr><td>💧 Liquidité</td><td>20%</td><td>100M</td><td>Pool PancakeSwap (BNB/B_MAK)</td></tr>
+                <tr><td>🎁 Récompenses</td><td>15%</td><td>75M</td><td>Distribuées via check-in et parrainage</td></tr>
+                <tr><td>📢 Marketing</td><td>15%</td><td>75M</td><td>Promotions, influenceurs, airdrops</td></tr>
+                <tr><td>👥 Équipe</td><td>10%</td><td>50M</td><td>Vesting progressif</td></tr>
+                <tr><td>🏦 Trésorerie</td><td>10%</td><td>50M</td><td>Développement futur</td></tr>
+                <tr><td>🤝 Partenariats</td><td>10%</td><td>50M</td><td>Intégrations, vendeurs</td></tr>
+                <tr><td>🛡️ Sécurité</td><td>10%</td><td>50M</td><td>Audits, imprévus</td></tr>
+                <tr><td>✨ Airdrops / Bonus</td><td>10%</td><td>50M</td><td>Concours, récompenses spéciales</td></tr>
+            </table>
+            <p><strong>Taxe : 2% sur chaque transaction</strong><br>
+            • 1% brûlé (burn) → réduction de l'offre<br>
+            • 0,5% marketing → développement et promotion<br>
+            • 0,3% équipe → soutien au développement<br>
+            • 0,2% holders → redistribution aux détenteurs</p>
+
+            <h2>5. FONCTIONNALITÉS ACTUELLES</h2>
+            <ul>
+                <li>✅ Check-in quotidien : 100 B_MAK / jour</li>
+                <li>✅ Bonus de série : +500 (7j), +1000 (14j), +3000 (30j)</li>
+                <li>✅ Parrainage : 50 B_MAK par filleul</li>
+                <li>✅ Site web : <a href="https://bmak.finance">bmak.finance</a></li>
+                <li>✅ Mini App Telegram : @B_MAK_Claim_Bot</li>
+                <li>✅ Base de données : Supabase (gratuit, scalable)</li>
+                <li>✅ Hébergement : Vercel (rapide, stable)</li>
+            </ul>
+
+            <h2>6. FEUILLE DE ROUTE (ROADMAP)</h2>
+            <table>
+                <tr><th>Période</th><th>Objectifs</th></tr>
+                <tr><td>Q2 2026</td><td>Lancement bot Telegram, site vitrine, premiers 1000 mineurs</td></tr>
+                <tr><td>Q3 2026</td><td>Listing CoinMarketCap, 5000 holders, audit de sécurité</td></tr>
+                <tr><td>Q4 2026</td><td>Ajout de liquidité (1+ BNB), staking simple</td></tr>
+                <tr><td>2027</td><td>Application mobile (Play Store / App Store), e-commerce, partenariats</td></tr>
+            </table>
+
+            <h2>7. ÉQUIPE</h2>
+            <p><strong>Benjamin Makoma</strong> – Fondateur & développeur solo<br>
+            Autodidacte, passionné par la blockchain et la transparence. Identité publique, joignable directement via <a href="mailto:ben.makoma98@gmail.com">ben.makoma98@gmail.com</a>.</p>
+
+            <h2>8. RISQUES & AVERTISSEMENTS</h2>
+            <ul>
+                <li>B_MAK est un projet <strong>gratuit</strong> – aucune valeur marchande garantie</li>
+                <li>Volatilité des crypto-actifs (perte totale possible)</li>
+                <li>Réglementation incertaine (RDC et international)</li>
+                <li>Projet solo : le rythme de développement dépend d'une seule personne</li>
+                <li>Absence d'audit formel du smart contract à ce jour</li>
+            </ul>
+
+            <h2>9. CONTACT & LIENS</h2>
+            <ul>
+                <li>🌐 Site web : <a href="https://bmak.finance">bmak.finance</a></li>
+                <li>🤖 Bot Telegram : <a href="https://t.me/B_MAK_Claim_Bot">@B_MAK_Claim_Bot</a></li>
+                <li>📧 Email : ben.makoma98@gmail.com</li>
+                <li>📜 Contrat B_MAK : <code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code></li>
+                <li>🔗 BscScan : <a href="https://bscscan.com/token/0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D" target="_blank">Voir le contrat</a></li>
+            </ul>
+        </div>
+
+        <!-- ==================== ENGLISH ==================== -->
+        <div class="lang-section">
+            <div class="lang-badge">🇬🇧 ENGLISH – Whitepaper</div>
+
+            <h2>1. EXECUTIVE SUMMARY</h2>
+            <p>B_MAK is a BEP-20 token on BNB Smart Chain (BSC), distributed for free through a <strong>daily check-in</strong> system. Users earn 100 B_MAK per day, with streak bonuses (7, 14, 30 days) and a referral system (50 B_MAK per referral).</p>
+            <p>The long-term goal is to build an <strong>e-commerce ecosystem</strong> where B_MAK will serve as a payment method, while maintaining a transparent and engaged community.</p>
+
+            <h2>2. PROBLEM & SOLUTION</h2>
+            <h3>Problem</h3>
+            <ul>
+                <li>Few truly free and risk-free projects</li>
+                <li>Lack of transparency in traditional faucets</li>
+                <li>Free tokens often have no real utility</li>
+            </ul>
+            <h3>B_MAK Solution</h3>
+            <ul>
+                <li><strong>100% free</strong> – no purchase required</li>
+                <li><strong>Full transparency</strong> – public contract, open code, clear terms</li>
+                <li><strong>Future utility</strong> – e-commerce, staking, partnerships</li>
+                <li><strong>Active community</strong> – Telegram, bot, website</li>
+            </ul>
+
+            <h2>3. TECHNOLOGY & BLOCKCHAIN</h2>
+            <ul>
+                <li><strong>Network</strong> : BNB Smart Chain (BSC) – low fees, fast, reliable</li>
+                <li><strong>Token type</strong> : BEP-20</li>
+                <li><strong>Contract address</strong> : <code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code></li>
+                <li><strong>Supported wallets</strong> : MetaMask, Trust Wallet, Binance Wallet, SafePal, etc.</li>
+                <li><strong>Explorer</strong> : <a href="https://bscscan.com/token/0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D" target="_blank">BscScan</a></li>
+            </ul>
+
+            <h2>4. TOKENOMICS (500M B_MAK Supply)</h2>
+            <table>
+                <tr><th>Category</th><th>%</th><th>Amount</th><th>Explanation</th></tr>
+                <tr><td>💧 Liquidity</td><td>20%</td><td>100M</td><td>PancakeSwap pool (BNB/B_MAK)</td></tr>
+                <tr><td>🎁 Rewards</td><td>15%</td><td>75M</td><td>Daily check-in & referrals</td></tr>
+                <tr><td>📢 Marketing</td><td>15%</td><td>75M</td><td>Promotions, influencers, airdrops</td></tr>
+                <tr><td>👥 Team</td><td>10%</td><td>50M</td><td>Progressive vesting</td></tr>
+                <tr><td>🏦 Treasury</td><td>10%</td><td>50M</td><td>Future development</td></tr>
+                <tr><td>🤝 Partnerships</td><td>10%</td><td>50M</td><td>Integrations, merchants</td></tr>
+                <tr><td>🛡️ Security</td><td>10%</td><td>50M</td><td>Audits, contingencies</td></tr>
+                <tr><td>✨ Airdrops / Bonus</td><td>10%</td><td>50M</td><td>Contests, special rewards</td></tr>
+            </table>
+            <p><strong>Transaction tax: 2%</strong><br>
+            • 1% burned → supply reduction<br>
+            • 0.5% marketing → development & promotion<br>
+            • 0.3% team → development support<br>
+            • 0.2% holders → redistribution to holders</p>
+
+            <h2>5. CURRENT FEATURES</h2>
+            <ul>
+                <li>✅ Daily check-in: 100 B_MAK / day</li>
+                <li>✅ Streak bonuses: +500 (7d), +1000 (14d), +3000 (30d)</li>
+                <li>✅ Referral system: 50 B_MAK per referral</li>
+                <li>✅ Website: <a href="https://bmak.finance">bmak.finance</a></li>
+                <li>✅ Telegram Mini App: @B_MAK_Claim_Bot</li>
+                <li>✅ Database: Supabase (free, scalable)</li>
+                <li>✅ Hosting: Vercel (fast, stable)</li>
+            </ul>
+
+            <h2>6. ROADMAP</h2>
+            <table>
+                <tr><th>Period</th><th>Goals</th></tr>
+                <tr><td>Q2 2026</td><td>Telegram bot launch, website, first 1000 miners</td></tr>
+                <tr><td>Q3 2026</td><td>CoinMarketCap listing, 5000 holders, security audit</td></tr>
+                <tr><td>Q4 2026</td><td>Add liquidity (1+ BNB), simple staking</td></tr>
+                <tr><td>2027</td><td>Mobile app (Play Store / App Store), e-commerce, partnerships</td></tr>
+            </table>
+
+            <h2>7. TEAM</h2>
+            <p><strong>Benjamin Makoma</strong> – Founder & solo developer<br>
+            Self-taught, passionate about blockchain and transparency. Public identity, directly reachable at <a href="mailto:ben.makoma98@gmail.com">ben.makoma98@gmail.com</a>.</p>
+
+            <h2>8. RISKS & DISCLAIMERS</h2>
+            <ul>
+                <li>B_MAK is a <strong>free project</strong> – no guaranteed market value</li>
+                <li>Crypto-asset volatility (possible total loss)</li>
+                <li>Uncertain regulation (DRC and international)</li>
+                <li>Solo project: development pace depends on one person</li>
+                <li>No formal smart contract audit to date</li>
+            </ul>
+
+            <h2>9. CONTACT & LINKS</h2>
+            <ul>
+                <li>🌐 Website: <a href="https://bmak.finance">bmak.finance</a></li>
+                <li>🤖 Telegram Bot: <a href="https://t.me/B_MAK_Claim_Bot">@B_MAK_Claim_Bot</a></li>
+                <li>📧 Email: ben.makoma98@gmail.com</li>
+                <li>📜 B_MAK Contract: <code>0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D</code></li>
+                <li>🔗 BscScan: <a href="https://bscscan.com/token/0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D" target="_blank">View contract</a></li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 B_MAK – Tous droits réservés | All rights reserved</p>
+            <p>Version 1.0 – 23 avril 2026 | <a href="https://bmak.finance">bmak.finance</a></p>
+        </div>
+    </div>
+</body>
+</html>

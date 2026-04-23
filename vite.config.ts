@@ -27,6 +27,7 @@ export default defineConfig({
         app: resolve(__dirname, 'public/app/index.html'),
         admin: resolve(__dirname, 'public/admin/index.html'),
         cgu: resolve(__dirname, 'public/cgu/index.html'),
+        whitepaper: resolve(__dirname, 'public/whitepaper/index.html'),
       },
     },
   },

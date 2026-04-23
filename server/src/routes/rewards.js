@@ -115,8 +115,8 @@ router.get('/referrals/:userId', async (req, res) => {
     }));
 
     const botUsername = process.env.BOT_USERNAME || 'B_MAK_Clean_Bot';
-    const domain = process.env.REPLIT_DEV_DOMAIN || process.env.APP_DOMAIN || '';
-    const webLink = domain ? `https://${domain}/app?ref=${user.referral_code}` : '';
+    const domain = process.env.APP_DOMAIN || process.env.MINI_APP_URL?.replace(/^https?:\/\//, '') || process.env.REPLIT_DEV_DOMAIN || 'bmak.finance';
+    const webLink = `https://${domain.replace(/^https?:\/\//, '').replace(/\/$/, '')}/app?ref=${user.referral_code}`;
     const tgLink = `https://t.me/${botUsername}?start=${user.referral_code}`;
 
     res.json({
