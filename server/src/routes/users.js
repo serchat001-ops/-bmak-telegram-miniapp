@@ -182,6 +182,8 @@ router.post('/web-register', async (req, res) => {
 
 // ─── Web Login ────────────────────────────────────────────────────────────────
 router.post('/web-login', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Base de données non configurée' });
+
   const { email, password } = req.body;
 
   if (!email || !password) {
