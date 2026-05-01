@@ -96,6 +96,31 @@ vite.config.ts     - Vite dev server (serves public/, proxies /api → 3001)
 - `/start` opens the mini app via inline `webApp` button pointing to `REPLIT_DEV_DOMAIN` (or `MINI_APP_URL` if set)
 - Supabase credentials read from `EXPO_PUBLIC_BMAK_SUPABASE_URL` / `EXPO_PUBLIC_BMAK_SUPABASE_ANON_KEY` (fallback `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`)
 
+## Email — contact@bmak.finance
+
+Email forwarding is live via **ImprovMX** (free plan). All inbound mail to
+`*@bmak.finance` (including `contact@bmak.finance`) is forwarded to
+`ben.makoma98@gmail.com`.
+
+### DNS records on Namecheap (Advanced DNS → bmak.finance)
+
+| Type | Host | Value | Priority |
+|------|------|-------|----------|
+| MX Record | `@` | `mx1.improvmx.com` | 10 |
+| MX Record | `@` | `mx2.improvmx.com` | 20 |
+| TXT Record | `@` | `v=spf1 include:spf.improvmx.com ~all` | — |
+
+### ImprovMX alias
+
+| Alias | Forwards to |
+|-------|------------|
+| `*@bmak.finance` (catch-all) | `ben.makoma98@gmail.com` |
+
+Status: **Email forwarding active** (verified May 2026, end-to-end test passed).
+
+References in code: `public/index.html`, `public/cgu/index.html`,
+`public/whitepaper/index.html` — all use `mailto:contact@bmak.finance`.
+
 ## GitHub Sync
 
 - Repo: `serchat001-ops/-bmak-telegram-miniapp` (branch `main`)
