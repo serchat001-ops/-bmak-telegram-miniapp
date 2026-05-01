@@ -13,6 +13,7 @@ const adminRouter = require('./routes/admin');
 const walletRouter = require('./routes/wallet');
 const reclamationsRouter = require('./routes/reclamations');
 const notificationsRouter = require('./routes/notifications');
+const contactRouter = require('./routes/contact');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/reclamations', reclamationsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/contact', contactRouter);
 
 app.get('/api/config', (req, res) => {
   res.json({

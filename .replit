@@ -74,3 +74,6 @@ run = ["node", "server/src/index.js"]
 BMAK_CONTRACT_ADDRESS = "0x380de6Ee3e54036bb29fc1EB61c2ef9a2AAab39D"
 ADMIN_EMAIL = "officielbmak@gmail.com"
 TELEGRAM_BOT_USERNAME = "B_MAK_officiel_bot"
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "587"
+SMTP_FROM = "contact@bmak.finance"
