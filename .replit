@@ -79,3 +79,7 @@ SMTP_PORT = "587"
 SMTP_FROM = "contact@bmak.finance"
 DKIM_SELECTOR = "mail2026"
 DKIM_DOMAIN = "bmak.finance"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
